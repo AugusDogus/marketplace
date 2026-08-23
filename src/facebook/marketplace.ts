@@ -10,7 +10,7 @@ import type {
   MarketplaceNotification,
 } from '../domain/marketplace';
 import { CometRequestMetadata, type CometRequestMetadata as RequestMetadata } from './comet-context';
-import { FacebookBrowseRequest } from './listing-request';
+import { FacebookBrowseRequest, FacebookSearchRequest } from './listing-request';
 import { FacebookRequestProfile } from './request-profile';
 import { FacebookSession, type FacebookSession as Session } from './session';
 
@@ -619,52 +619,8 @@ const graphListings = async (
 ): Promise<MarketplaceResult<ListingPage>> => {
   const context = await graphContextFrom(page);
   if (!context.ok) return context;
-  const radiusKm = request.radius === null ? 805 : Math.round(request.radius * 1.609344);
-  const buyLocation = {
-    latitude: request.location.latitude,
-    longitude: request.location.longitude,
-  };
   const browseVariables = FacebookBrowseRequest.initialVariables(request);
-  const searchVariables = {
-    buyLocation,
-    contextual_data: null,
-    count: 24,
-    cursor: null,
-    params: {
-      bqf: { callsite: 'COMMERCE_MKTPLACE_WWW', query: request.query.trim() },
-      browse_request_params: {
-        commerce_enable_local_pickup: true,
-        commerce_enable_shipping: true,
-        commerce_search_and_rp_available: true,
-        commerce_search_and_rp_condition: null,
-        commerce_search_and_rp_ctime_days: null,
-        filter_location_latitude: buyLocation.latitude,
-        filter_location_longitude: buyLocation.longitude,
-        filter_price_lower_bound: 0,
-        filter_price_upper_bound: 214748364700,
-        filter_radius_km: radiusKm,
-      },
-      custom_request_params: {
-        browse_context: null,
-        contextual_filters: [],
-        referral_code: null,
-        referral_ui_component: null,
-        saved_search_strid: null,
-        search_vertical: 'C2C',
-        seo_url: null,
-        serp_landing_settings: { virtual_category_id: '' },
-        surface: 'SEARCH',
-        virtual_contextual_filters: [],
-      },
-    },
-    savedSearchID: null,
-    savedSearchQuery: request.query.trim(),
-    scale: 1,
-    shouldDeferNonCritical: false,
-    shouldIncludePopularSearches: true,
-    topicPageParams: { location_id: null, url: null },
-    __relay_internal__pv__GHLShouldChangeMarketplaceSponsoredDataFieldNamerelayprovider: true,
-  };
+  const searchVariables = FacebookSearchRequest.initialVariables(request);
   const searching = request.query.trim() !== '';
   const friendlyName = searching
     ? 'CometMarketplaceSearchContentContainerQuery'
@@ -700,46 +656,8 @@ const listingPageAfter = async (
   cursor: string,
 ): Promise<MarketplaceResult<ListingPage>> => {
   const searching = request.query.trim() !== '';
-  const radiusKm = request.radius === null ? 805 : Math.round(request.radius * 1.609344);
-  const buyLocation = {
-    latitude: request.location.latitude,
-    longitude: request.location.longitude,
-  };
   const browseVariables = FacebookBrowseRequest.paginationVariables(request, cursor);
-  const searchVariables = {
-    count: 24,
-    cursor,
-    params: {
-      bqf: { callsite: 'COMMERCE_MKTPLACE_WWW', query: request.query.trim() },
-      browse_request_params: {
-        commerce_enable_local_pickup: true,
-        commerce_enable_shipping: true,
-        commerce_search_and_rp_available: true,
-        commerce_search_and_rp_category_id: [],
-        commerce_search_and_rp_condition: null,
-        commerce_search_and_rp_ctime_days: null,
-        filter_location_latitude: buyLocation.latitude,
-        filter_location_longitude: buyLocation.longitude,
-        filter_price_lower_bound: 0,
-        filter_price_upper_bound: 214748364700,
-        filter_radius_km: radiusKm,
-      },
-      custom_request_params: {
-        browse_context: null,
-        contextual_filters: [],
-        referral_code: null,
-        referral_ui_component: null,
-        saved_search_strid: null,
-        search_vertical: 'C2C',
-        seo_url: null,
-        serp_landing_settings: { virtual_category_id: '' },
-        surface: 'SEARCH',
-        virtual_contextual_filters: [],
-      },
-    },
-    scale: 1,
-    __relay_internal__pv__GHLShouldChangeMarketplaceSponsoredDataFieldNamerelayprovider: true,
-  };
+  const searchVariables = FacebookSearchRequest.paginationVariables(request, cursor);
   const response = await graphRequest(context, {
     friendlyName: searching
       ? 'CometMarketplaceSearchContentPaginationQuery'
