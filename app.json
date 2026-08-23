@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "marketplace",
-    "slug": "marketplace",
+    "name": "Marketplace",
+    "slug": "marketplace-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,6 +10,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.augie.marketplace",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -20,6 +21,24 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-font",
+      "expo-secure-store",
+      [
+        "@preeternal/react-native-cookie-manager",
+        {
+          "androidWebkitVersion": "1.16.0"
+        }
+      ],
+      "expo-background-task",
+      [
+        "expo-notifications",
+        {
+          "color": "#1877F2",
+          "defaultChannel": "marketplace-alerts"
+        }
+      ]
+    ]
   }
 }
