@@ -29,7 +29,7 @@ export function AlertsScreen({ alerts, onBrowse, onDelete, onOpen }: AlertsScree
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.infoCard}>
             <Ionicons name="sparkles" size={20} color={colors.blue} />
-            <Text style={styles.infoText}>Facebook alerts are checked when you open the app and about every 15 minutes in the background.</Text>
+            <Text style={styles.infoText}>We’ll check for new matches when you open the app and periodically in the background.</Text>
           </View>
           {alerts.map((alert) => (
             <Pressable key={alert.id} onPress={() => onOpen(alert)} style={({ pressed }) => [styles.alertCard, pressed && styles.pressed]}>
@@ -40,7 +40,7 @@ export function AlertsScreen({ alerts, onBrowse, onDelete, onOpen }: AlertsScree
                 <View style={styles.activeRow}>
                   <View style={[styles.activeDot, alert.provider === 'legacy-local' && styles.localDot]} />
                   <Text style={[styles.activeText, alert.provider === 'legacy-local' && styles.localText]}>
-                    {alert.provider === 'facebook' ? 'Facebook alert active' : 'Saved on this device'} · Created {alert.createdAt}
+                    {alert.provider === 'facebook' ? 'Alert active' : 'Saved on this device'} · Created {alert.createdAt}
                   </Text>
                 </View>
               </View>

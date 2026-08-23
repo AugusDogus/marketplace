@@ -326,13 +326,13 @@ const graphContextFrom = async (page: AuthenticatedResponse): Promise<Marketplac
       ok: false,
       error: {
         tag: 'response_changed',
-        message: 'Facebook’s Marketplace page did not include its request tokens. Refresh and try again. If it continues, reconnect your Facebook session.',
+        message: 'Facebook could not finish loading Marketplace. Try again. If the problem continues, log out and sign in again.',
       },
     };
   }
   const userId = loaded.value.cookies.c_user;
   if (userId === undefined) {
-    return { ok: false, error: { tag: 'session_expired', message: 'The Facebook session is missing its signed-in account cookie. Sign in again.' } };
+    return { ok: false, error: { tag: 'session_expired', message: 'Facebook sign-in was not completed. Sign in again.' } };
   }
   return { ok: true, value: { dtsg, lsd, metadata: metadata.value, pageUrl: page.url, userId } };
 };
@@ -455,11 +455,11 @@ const getSetCookies = (headers: Headers): string[] => {
 
 const loadNormalizedSession = async (): Promise<MarketplaceResult<Session>> => {
   if (Platform.OS === 'web') {
-    return { ok: false, error: { tag: 'unsupported_platform', message: 'Direct Facebook requests are available in the iOS and Android app, not the web preview.' } };
+    return { ok: false, error: { tag: 'unsupported_platform', message: 'Live Marketplace results are only available in the Android or iOS app.' } };
   }
   const loaded = await FacebookSession.load();
   if (!loaded.ok || loaded.value === null) {
-    return { ok: false, error: { tag: 'not_authenticated', message: loaded.ok ? 'Sign in to Facebook or import an authenticated HAR to continue.' : loaded.error.message } };
+    return { ok: false, error: { tag: 'not_authenticated', message: loaded.ok ? 'Sign in to Facebook to continue.' : loaded.error.message } };
   }
   return { ok: true, value: { ...loaded.value, headers: FacebookRequestProfile.marketplaceDesktop } };
 };
@@ -484,10 +484,10 @@ const authenticatedRequest = async (
   const body = await response.text();
   await FacebookSession.save(FacebookSession.withSetCookies(loaded.value, getSetCookies(response.headers)));
   if (response.url.includes('/login') || body.includes('id="login_form"')) {
-    return { ok: false, error: { tag: 'session_expired', message: 'The Facebook session has expired. Sign in again or import a fresh HAR.' } };
+    return { ok: false, error: { tag: 'session_expired', message: 'Your Facebook sign-in has expired. Sign in again.' } };
   }
   if (!response.ok) {
-    return { ok: false, error: { tag: 'request_failed', message: `Facebook returned HTTP ${response.status}. Your saved session remains intact. Try again in a moment.` } };
+    return { ok: false, error: { tag: 'request_failed', message: 'Facebook could not complete that action. You are still signed in. Try again in a moment.' } };
   }
   return { ok: true, value: { body, url: response.url } };
 };
@@ -523,7 +523,7 @@ const graphListings = async (
   if (!response.ok) return response;
   const graphError = graphErrorMessage(response.value.body);
   if (graphError !== null) {
-    return { ok: false, error: { tag: 'request_failed', message: `Facebook rejected this Marketplace request: ${graphError}. Your saved session remains intact. Try again; if it repeats, reconnect Facebook.` } };
+    return { ok: false, error: { tag: 'request_failed', message: 'Facebook could not load these listings. Try again. If the problem continues, log out and sign in again.' } };
   }
   const inspection = FacebookListingResponse.inspect(response.value.body);
   const seen = new Set<string>();
@@ -546,7 +546,7 @@ const graphListings = async (
       ok: false,
       error: {
         tag: 'response_changed',
-        message: 'Facebook returned the feed cursor without listing details. Pull to retry. If this keeps happening, reconnect Facebook from the account menu.',
+        message: 'Facebook did not return any listing details. Pull to retry. If the problem continues, log out and sign in again.',
       },
     };
   }
@@ -554,7 +554,7 @@ const graphListings = async (
     ok: false,
     error: {
       tag: 'response_changed',
-      message: 'Facebook changed its Marketplace response, so this version cannot read the listings. Your session is still saved. Retry once, then update the app or import a fresh HAR.',
+      message: 'Facebook changed how these listings are returned. Try again, then update the app if the problem continues. You are still signed in.',
     },
   };
 };
@@ -577,7 +577,7 @@ const listingPageAfter = async (
   if (!response.ok) return response;
   const graphError = graphErrorMessage(response.value.body);
   if (graphError !== null) {
-    return { ok: false, error: { tag: 'request_failed', message: `Facebook rejected the next-page request: ${graphError}. Your loaded listings are preserved. Try again; if it repeats, reconnect Facebook.` } };
+    return { ok: false, error: { tag: 'request_failed', message: 'Facebook could not load more listings. Your current listings are still here. Try again.' } };
   }
   const inspection = FacebookListingResponse.inspect(response.value.body);
   const seen = new Set<string>();
@@ -600,7 +600,7 @@ const listingPageAfter = async (
       ok: false,
       error: {
         tag: 'response_changed',
-        message: 'Facebook returned the next-page cursor without listing details. Your loaded listings are preserved. Try again; if it repeats, reconnect Facebook.',
+        message: 'Facebook did not return more listing details. Your current listings are still here. Try again.',
       },
     };
   }
@@ -608,7 +608,7 @@ const listingPageAfter = async (
     ok: false,
     error: {
       tag: 'response_changed',
-      message: 'Facebook changed its pagination response. Your loaded listings are preserved. Try again; if it repeats, update the app or import a fresh HAR.',
+      message: 'Facebook changed how more listings are returned. Your current listings are still here. Try again, then update the app if the problem continues.',
     },
   };
 };

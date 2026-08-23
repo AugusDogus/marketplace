@@ -12,12 +12,11 @@ type SessionSheetProps = {
   status: ConnectionStatus;
   visible: boolean;
   onClose: () => void;
-  onImport: () => void;
   onLogin: () => void;
   onLogout: () => void;
 };
 
-export function SessionSheet({ busy, error, status, visible, onClose, onImport, onLogin, onLogout }: SessionSheetProps) {
+export function SessionSheet({ busy, error, status, visible, onClose, onLogin, onLogout }: SessionSheetProps) {
   const connected = status === 'connected';
   return (
     <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={visible}>
@@ -26,25 +25,25 @@ export function SessionSheet({ busy, error, status, visible, onClose, onImport, 
           <Pressable accessibilityLabel="Close account" onPress={onClose} style={styles.closeButton}>
             <Ionicons name="close" size={25} color={colors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Facebook session</Text>
+          <Text style={styles.headerTitle}>Facebook account</Text>
           <View style={styles.closeButton} />
         </View>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={[styles.heroIcon, connected && styles.heroIconConnected]}>
             <Ionicons name={connected ? 'checkmark' : 'logo-facebook'} size={30} color={connected ? colors.surface : colors.blue} />
           </View>
-          <Text style={styles.title}>{connected ? 'Connected to Facebook' : 'Connect Facebook Marketplace'}</Text>
+          <Text style={styles.title}>{connected ? 'You’re signed in' : 'Sign in to Marketplace'}</Text>
           <Text style={styles.description}>
             {connected
-              ? 'Marketplace requests go directly from this device to Facebook with the saved session.'
-              : 'Log in on Facebook’s real page, then return to live Marketplace results.'}
+              ? 'Your Facebook account is ready to browse Marketplace.'
+              : 'Continue with Facebook to browse live listings and create alerts.'}
           </Text>
 
           <View style={styles.securityCard}>
             <Ionicons name="lock-closed" size={20} color={colors.success} />
             <View style={styles.securityCopy}>
-              <Text style={styles.securityTitle}>Cookies stay on this device</Text>
-              <Text style={styles.securityText}>They are never copied into source code, AsyncStorage, or a server.</Text>
+              <Text style={styles.securityTitle}>Your sign-in stays private</Text>
+              <Text style={styles.securityText}>Your account information is stored securely on this device.</Text>
             </View>
           </View>
 
@@ -56,12 +55,11 @@ export function SessionSheet({ busy, error, status, visible, onClose, onImport, 
           ) : null}
 
           {busy || status === 'checking' ? (
-            <View style={styles.busyRow}><ActivityIndicator color={colors.blue} /><Text style={styles.busyText}>Checking Facebook session…</Text></View>
+            <View style={styles.busyRow}><ActivityIndicator color={colors.blue} /><Text style={styles.busyText}>Checking your account…</Text></View>
           ) : connected ? (
             <>
-              <Pressable onPress={onImport} style={styles.secondaryButton}><Text style={styles.secondaryText}>Replace session HAR</Text></Pressable>
               <Pressable onPress={onLogout} style={styles.logoutButton}><Text style={styles.logoutText}>Log out of this app</Text></Pressable>
-              <Text style={styles.footnote}>Logging out removes the locally stored cookies. It does not sign out other Facebook apps or browsers.</Text>
+              <Text style={styles.footnote}>This will not log you out of Facebook in other apps or browsers.</Text>
             </>
           ) : (
             <View style={styles.form}>
@@ -70,12 +68,7 @@ export function SessionSheet({ busy, error, status, visible, onClose, onImport, 
                 style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
               >
                 <Ionicons name="logo-facebook" size={19} color={colors.surface} />
-                <Text style={styles.primaryText}>Continue to Facebook login</Text>
-              </Pressable>
-              <View style={styles.dividerRow}><View style={styles.divider} /><Text style={styles.or}>or</Text><View style={styles.divider} /></View>
-              <Pressable onPress={onImport} style={styles.importButton}>
-                <Ionicons name="document-attach-outline" size={18} color={colors.blue} />
-                <Text style={styles.importText}>Import captured login HAR</Text>
+                <Text style={styles.primaryText}>Continue with Facebook</Text>
               </Pressable>
             </View>
           )}
@@ -106,15 +99,8 @@ const styles = StyleSheet.create({
   form: { width: '100%', marginTop: 22 },
   primaryButton: { width: '100%', height: 50, borderRadius: 12, backgroundColor: colors.blue, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   primaryText: { color: colors.surface, fontSize: 15, fontWeight: '800' },
-  secondaryButton: { width: '100%', height: 48, marginTop: 25, borderRadius: 12, backgroundColor: colors.blueSoft, alignItems: 'center', justifyContent: 'center' },
-  secondaryText: { color: colors.blue, fontSize: 14, fontWeight: '800' },
-  logoutButton: { width: '100%', height: 48, marginTop: 10, borderRadius: 12, borderWidth: 1, borderColor: '#F0B3B3', alignItems: 'center', justifyContent: 'center' },
+  logoutButton: { width: '100%', height: 48, marginTop: 25, borderRadius: 12, borderWidth: 1, borderColor: '#F0B3B3', alignItems: 'center', justifyContent: 'center' },
   logoutText: { color: colors.danger, fontSize: 14, fontWeight: '800' },
   footnote: { maxWidth: 360, marginTop: 12, color: colors.muted, fontSize: 11, lineHeight: 16, textAlign: 'center' },
-  dividerRow: { marginVertical: 17, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  divider: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.line },
-  or: { color: colors.muted, fontSize: 12, fontWeight: '600' },
-  importButton: { height: 46, borderRadius: 11, borderWidth: 1, borderColor: '#B9D8FF', backgroundColor: colors.blueSoft, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
-  importText: { color: colors.blue, fontSize: 14, fontWeight: '800' },
   pressed: { opacity: 0.72 },
 });

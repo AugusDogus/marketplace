@@ -25,7 +25,7 @@ export const FacebookWebAuth = {
     } catch {
       return {
         ok: false,
-        error: { tag: 'cookie_store_failed', message: 'The Facebook WebView cookie store could not be read.' },
+        error: { tag: 'cookie_store_failed', message: 'Facebook sign-in could not be completed. Close this page and try again.' },
       };
     }
     const cookies = Object.fromEntries(
@@ -60,7 +60,7 @@ export const FacebookWebAuth = {
         ok: false,
         error: {
           tag: 'cookie_store_failed',
-          message: 'The app session was removed, but the embedded Facebook login cookies could not be cleared.',
+          message: 'You are logged out of this app, but Facebook sign-in could not be fully cleared. Restart the app before signing in again.',
         },
       };
     }

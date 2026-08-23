@@ -60,13 +60,13 @@ export function FacebookLoginModal({ visible, onAuthenticated, onClose }: Facebo
         <WebView
           domStorageEnabled
           javaScriptEnabled
-          onHttpError={(event) => setError(`Facebook returned HTTP ${event.nativeEvent.statusCode}.`)}
+          onHttpError={() => setError('Facebook couldn’t open this page. Check your connection and try again.')}
           onLoadEnd={() => void inspectCookies()}
           onNavigationStateChange={() => void inspectCookies()}
           renderLoading={() => (
             <View style={styles.loading}>
               <ActivityIndicator color={colors.blue} size="large" />
-              <Text style={styles.loadingText}>Loading Facebook securely…</Text>
+              <Text style={styles.loadingText}>Opening Facebook…</Text>
             </View>
           )}
           setSupportMultipleWindows={false}

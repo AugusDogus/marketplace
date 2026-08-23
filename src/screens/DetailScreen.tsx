@@ -76,7 +76,7 @@ export function DetailScreen({ listing, detailState, saved, onBack, onToggleSave
             <Text style={styles.detailText}>{listing.pickupOptions.length > 0 ? listing.pickupOptions.join(' · ') : 'Local pickup'}</Text>
           </View>
           {detailState.status === 'loading' ? (
-            <View style={styles.detailLoading}><ActivityIndicator color={colors.blue} /><Text style={styles.detailLoadingText}>Loading live details from Facebook…</Text></View>
+            <View style={styles.detailLoading}><ActivityIndicator color={colors.blue} /><Text style={styles.detailLoadingText}>Loading listing details…</Text></View>
           ) : detailState.status === 'error' ? (
             <Text style={styles.detailError}>{detailState.message}</Text>
           ) : (

@@ -230,7 +230,7 @@ function MarketplaceApp() {
           setAlerts(persisted.alerts);
         }
       } catch {
-        setStorageError('Saved items and alerts could not be restored. Your current session still works.');
+        setStorageError('Saved items and alerts could not be restored. You are still signed in.');
       } finally {
         setHydrated(true);
       }
@@ -245,7 +245,7 @@ function MarketplaceApp() {
         await AsyncStorage.setItem(storageKey, JSON.stringify({ savedIds: [...savedIds], alerts }));
         setStorageError(null);
       } catch {
-        setStorageError('Changes could not be saved to this device. They remain available for this session.');
+        setStorageError('Changes could not be saved to this device. They will remain until you close the app.');
       }
     };
     void persist();
@@ -286,24 +286,6 @@ function MarketplaceApp() {
   const savedListings = useMemo(() => listings.filter((listing) => savedIds.has(listing.id)), [listings, savedIds]);
   const detailListing = screen.name === 'detail' ? listings.find((listing) => listing.id === screen.listingId) : undefined;
 
-  const importHar = async () => {
-    setSessionBusy(true);
-    setSessionError(null);
-    const result = await FacebookSession.importHar();
-    if (result.ok) {
-      await MarketplaceAlerts.reset();
-      setSessionStatus('connected');
-      setToast('Facebook session imported');
-      await refreshListings({ query, location: filters.location, radius: filters.radius });
-      await MarketplaceAlerts.start();
-      setSessionVisible(false);
-    } else if (result.error.tag !== 'cancelled') {
-      setSessionStatus('disconnected');
-      setSessionError(result.error.message);
-    }
-    setSessionBusy(false);
-  };
-
   const openWebLogin = () => {
     setSessionError(null);
     setSessionVisible(false);
@@ -328,7 +310,7 @@ function MarketplaceApp() {
         await MarketplaceAlerts.stop();
         await MarketplaceAlerts.reset();
       } catch {
-        setStorageError('Facebook was logged out, but the background alert schedule could not be cleared. It cannot access the removed session.');
+        setStorageError('You are logged out, but an old alert check could not be removed. It can no longer access your account.');
       }
       setSessionStatus('disconnected');
       setListings([]);
@@ -498,7 +480,6 @@ function MarketplaceApp() {
           busy={sessionBusy}
           error={sessionError}
           onClose={() => setSessionVisible(false)}
-          onImport={() => void importHar()}
           onLogin={openWebLogin}
           onLogout={() => void logout()}
           status={sessionStatus}

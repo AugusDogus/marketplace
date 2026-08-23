@@ -104,7 +104,7 @@ export function LocationPickerModal({ onClose, onSelect, selected, visible }: Lo
           keyExtractor={(item) => `${item.location.latitude}:${item.location.longitude}`}
           ListEmptyComponent={
             status === 'loading' ? (
-              <View style={styles.message}><ActivityIndicator color={colors.blue} /><Text style={styles.messageText}>Searching Facebook locations</Text></View>
+              <View style={styles.message}><ActivityIndicator color={colors.blue} /><Text style={styles.messageText}>Searching locations…</Text></View>
             ) : status === 'loaded' ? (
               <View style={styles.message}><Text style={styles.messageTitle}>No matching locations</Text><Text style={styles.messageText}>Try a nearby city or a broader name.</Text></View>
             ) : status === 'error' ? (

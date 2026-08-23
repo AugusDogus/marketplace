@@ -99,16 +99,16 @@ export function BrowseScreen({
             {loading ? (
               <>
                 <ActivityIndicator color={colors.blue} size="large" />
-                <Text style={styles.emptyTitle}>Loading Facebook Marketplace</Text>
-                <Text style={styles.emptyText}>Requesting fresh listings with your saved session.</Text>
+                <Text style={styles.emptyTitle}>Loading Marketplace</Text>
+                <Text style={styles.emptyText}>Finding fresh listings near {filters.location.label}.</Text>
               </>
             ) : !connected ? (
               <>
                 <View style={styles.emptyIcon}><Ionicons name="logo-facebook" size={27} color={colors.blue} /></View>
-                <Text style={styles.emptyTitle}>Connect Facebook</Text>
-                <Text style={styles.emptyText}>{error ?? 'Sign in or import an authenticated HAR to load live Marketplace results.'}</Text>
+                <Text style={styles.emptyTitle}>Sign in to Facebook</Text>
+                <Text style={styles.emptyText}>{error ?? 'Sign in to browse live Marketplace listings.'}</Text>
                 <Pressable onPress={onOpenAccount} style={styles.emptyButton}>
-                  <Text style={styles.emptyButtonText}>Connect session</Text>
+                  <Text style={styles.emptyButtonText}>Sign in</Text>
                 </Pressable>
               </>
             ) : error !== null ? (

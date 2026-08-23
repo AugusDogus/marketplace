@@ -65,7 +65,7 @@ export function FilterSheet({ visible, value, onApply, onClose }: FilterSheetPro
             <View style={styles.grow}>
               <Text style={styles.locationLabel}>Search location</Text>
               <Text numberOfLines={1} style={styles.locationValue}>{draft.location.label}</Text>
-              <Text style={styles.supporting}>Facebook results will be requested for this location.</Text>
+              <Text style={styles.supporting}>Listings will be shown around this location.</Text>
             </View>
             <Ionicons color={colors.muted} name="chevron-forward" size={20} />
           </Pressable>

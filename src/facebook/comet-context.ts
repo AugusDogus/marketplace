@@ -139,7 +139,7 @@ export const CometRequestMetadata = {
     ) {
       return {
         ok: false,
-        message: 'Facebook’s Marketplace page did not include its Comet request context. Refresh and try again. If it continues, reconnect your Facebook session.',
+        message: 'Facebook could not finish loading Marketplace. Try again. If the problem continues, log out and sign in again.',
       };
     }
     return {

@@ -57,7 +57,7 @@ const saveState = async (seenIds: readonly string[]): Promise<AlertMonitorResult
       ok: false,
       error: {
         tag: 'storage_failed',
-        message: 'Marketplace notification history could not be saved. Facebook alerts remain active.',
+        message: 'Recent alert activity could not be saved. Your alerts are still active.',
       },
     };
   }
@@ -97,7 +97,7 @@ const synchronize = async (): Promise<AlertMonitorResult<{ delivered: number }>>
       ok: false,
       error: {
         tag: 'storage_failed',
-        message: 'Marketplace notification history could not be read. No duplicate notifications were sent.',
+        message: 'Recent alert activity could not be loaded, so no notifications were sent.',
       },
     };
   }
