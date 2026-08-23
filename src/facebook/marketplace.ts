@@ -319,8 +319,16 @@ const graphContextFrom = async (page: AuthenticatedResponse): Promise<Marketplac
   const dtsg = firstCapture(page.body, /"DTSGInitialData",\[\],\{"token":"([^"]+)"/);
   const metadata = CometRequestMetadata.fromHtml(page.body);
   const loaded = await loadNormalizedSession();
-  if (lsd === null || dtsg === null || !metadata.ok || !loaded.ok) {
-    return { ok: false, error: { tag: 'response_changed', message: 'Facebook did not provide the request data needed to apply this location.' } };
+  if (!loaded.ok) return loaded;
+  if (!metadata.ok) return { ok: false, error: { tag: 'response_changed', message: metadata.message } };
+  if (lsd === null || dtsg === null) {
+    return {
+      ok: false,
+      error: {
+        tag: 'response_changed',
+        message: 'Facebook’s Marketplace page did not include its request tokens. Refresh and try again. If it continues, reconnect your Facebook session.',
+      },
+    };
   }
   const userId = loaded.value.cookies.c_user;
   if (userId === undefined) {
@@ -479,7 +487,7 @@ const authenticatedRequest = async (
     return { ok: false, error: { tag: 'session_expired', message: 'The Facebook session has expired. Sign in again or import a fresh HAR.' } };
   }
   if (!response.ok) {
-    return { ok: false, error: { tag: 'request_failed', message: `Facebook returned HTTP ${response.status}. Your saved session remains intact.` } };
+    return { ok: false, error: { tag: 'request_failed', message: `Facebook returned HTTP ${response.status}. Your saved session remains intact. Try again in a moment.` } };
   }
   return { ok: true, value: { body, url: response.url } };
 };
@@ -515,11 +523,12 @@ const graphListings = async (
   if (!response.ok) return response;
   const graphError = graphErrorMessage(response.value.body);
   if (graphError !== null) {
-    return { ok: false, error: { tag: 'request_failed', message: `Facebook could not apply this filter: ${graphError}` } };
+    return { ok: false, error: { tag: 'request_failed', message: `Facebook rejected this Marketplace request: ${graphError}. Your saved session remains intact. Try again; if it repeats, reconnect Facebook.` } };
   }
+  const inspection = FacebookListingResponse.inspect(response.value.body);
   const seen = new Set<string>();
   const listings = [
-    ...FacebookListingResponse.listings(response.value.body),
+    ...(inspection.tag === 'page' ? inspection.listings : []),
     ...parseRawGraphListings(response.value.body),
     ...parseListings(response.value.body),
   ].filter((listing) => {
@@ -527,9 +536,27 @@ const graphListings = async (
     seen.add(listing.id);
     return true;
   });
-  return listings.length > 0
-    ? { ok: true, value: { listings, nextCursor: FacebookListingResponse.nextCursor(response.value.body) } }
-    : { ok: false, error: { tag: 'response_changed', message: 'Facebook accepted the distance filter, but its result format could not be parsed.' } };
+  const nextCursor = inspection.tag === 'page' || inspection.tag === 'missing_listing_data'
+    ? inspection.nextCursor
+    : null;
+  if (listings.length > 0) return { ok: true, value: { listings, nextCursor } };
+  if (inspection.tag === 'empty') return { ok: true, value: { listings: [], nextCursor: null } };
+  if (inspection.tag === 'missing_listing_data') {
+    return {
+      ok: false,
+      error: {
+        tag: 'response_changed',
+        message: 'Facebook returned the feed cursor without listing details. Pull to retry. If this keeps happening, reconnect Facebook from the account menu.',
+      },
+    };
+  }
+  return {
+    ok: false,
+    error: {
+      tag: 'response_changed',
+      message: 'Facebook changed its Marketplace response, so this version cannot read the listings. Your session is still saved. Retry once, then update the app or import a fresh HAR.',
+    },
+  };
 };
 
 const listingPageAfter = async (
@@ -550,11 +577,12 @@ const listingPageAfter = async (
   if (!response.ok) return response;
   const graphError = graphErrorMessage(response.value.body);
   if (graphError !== null) {
-    return { ok: false, error: { tag: 'request_failed', message: `Facebook could not load more listings: ${graphError}` } };
+    return { ok: false, error: { tag: 'request_failed', message: `Facebook rejected the next-page request: ${graphError}. Your loaded listings are preserved. Try again; if it repeats, reconnect Facebook.` } };
   }
+  const inspection = FacebookListingResponse.inspect(response.value.body);
   const seen = new Set<string>();
   const listings = [
-    ...FacebookListingResponse.listings(response.value.body),
+    ...(inspection.tag === 'page' ? inspection.listings : []),
     ...parseRawGraphListings(response.value.body),
     ...parseListings(response.value.body),
   ].filter((listing) => {
@@ -562,12 +590,25 @@ const listingPageAfter = async (
     seen.add(listing.id);
     return true;
   });
-  const nextCursor = FacebookListingResponse.nextCursor(response.value.body);
+  const nextCursor = inspection.tag === 'page' || inspection.tag === 'missing_listing_data'
+    ? inspection.nextCursor
+    : null;
+  if (listings.length > 0) return { ok: true, value: { listings, nextCursor } };
+  if (inspection.tag === 'empty') return { ok: true, value: { listings: [], nextCursor: null } };
+  if (inspection.tag === 'missing_listing_data') {
+    return {
+      ok: false,
+      error: {
+        tag: 'response_changed',
+        message: 'Facebook returned the next-page cursor without listing details. Your loaded listings are preserved. Try again; if it repeats, reconnect Facebook.',
+      },
+    };
+  }
   return {
-    ok: true,
-    value: {
-      listings,
-      nextCursor,
+    ok: false,
+    error: {
+      tag: 'response_changed',
+      message: 'Facebook changed its pagination response. Your loaded listings are preserved. Try again; if it repeats, update the app or import a fresh HAR.',
     },
   };
 };

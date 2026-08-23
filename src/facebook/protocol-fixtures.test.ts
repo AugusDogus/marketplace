@@ -27,26 +27,44 @@ describe('sanitized Facebook protocol fixtures', () => {
   test('parses deferred listings and the connection cursor', async () => {
     const response = await fixture('listing-pagination.jsonl');
 
-    expect(FacebookListingResponse.listings(response, 1_700_007_200_000)).toEqual([
-      {
-        id: '100000000000001',
-        title: 'Sanitized road bike',
-        price: 125,
-        formattedPrice: '$125',
-        city: 'Austin',
-        state: 'TX',
-        category: 'Other',
-        image: { uri: 'https://example.invalid/listing.jpg' },
-        pickupOptions: [],
-        listedAgo: '2 hours ago',
-      },
-    ]);
-    expect(FacebookListingResponse.nextCursor(response)).toBe('sanitized-next-page-cursor');
+    expect(FacebookListingResponse.inspect(response, 1_700_007_200_000)).toEqual({
+      tag: 'page',
+      listings: [
+        {
+          id: '100000000000001',
+          title: 'Sanitized road bike',
+          price: 125,
+          formattedPrice: '$125',
+          city: 'Austin',
+          state: 'TX',
+          category: 'Other',
+          image: { uri: 'https://example.invalid/listing.jpg' },
+          pickupOptions: [],
+          listedAgo: '2 hours ago',
+        },
+      ],
+      nextCursor: 'sanitized-next-page-cursor',
+    });
   });
 
   test('stops pagination when Facebook reports no next page', () => {
     const response = '{"data":{"page_info":{"end_cursor":"ignored-cursor","has_next_page":false}}}';
 
-    expect(FacebookListingResponse.nextCursor(response)).toBeNull();
+    expect(FacebookListingResponse.inspect(response)).toEqual({ tag: 'empty', nextCursor: null });
+  });
+
+  test('detects a deferred response that omits listing details', () => {
+    const response = '{"data":{"marketplace_home_feed":{"edges":[],"page_info":{"end_cursor":"retry-cursor","has_next_page":true}}}}';
+
+    expect(FacebookListingResponse.inspect(response)).toEqual({
+      tag: 'missing_listing_data',
+      nextCursor: 'retry-cursor',
+    });
+  });
+
+  test('detects a response outside the known Marketplace protocol', () => {
+    expect(FacebookListingResponse.inspect('{"data":{"viewer":{"id":"fixture-user"}}}')).toEqual({
+      tag: 'unrecognized',
+    });
   });
 });

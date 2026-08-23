@@ -71,6 +71,12 @@ type PageInfo = {
   hasNextPage: boolean;
 };
 
+export type FacebookListingResponseInspection =
+  | { tag: 'page'; listings: readonly Listing[]; nextCursor: string | null }
+  | { tag: 'empty'; nextCursor: null }
+  | { tag: 'missing_listing_data'; nextCursor: string | null }
+  | { tag: 'unrecognized' };
+
 const pageInfoFrom = (value: unknown, depth = 0): PageInfo | null => {
   if (depth > 10) return null;
   if (Array.isArray(value)) {
@@ -112,30 +118,47 @@ const pageInfoFromHtml = (source: string): PageInfo | null => {
   return found;
 };
 
-export const FacebookListingResponse = {
-  listings: (source: string, now = Date.now()): readonly Listing[] => {
-    const nodes: unknown[] = [];
-    for (const payload of payloadsFrom(source)) {
-      if (!isRecord(payload.data)) continue;
-      const data = payload.data;
-      if (isRecord(data.node)) nodes.push(data.node);
-      if (!isRecord(data.marketplace_home_feed) || !Array.isArray(data.marketplace_home_feed.edges)) continue;
-      for (const edge of data.marketplace_home_feed.edges) {
-        if (isRecord(edge) && isRecord(edge.node)) nodes.push(edge.node);
-      }
+const pageInfoFromResponse = (source: string): PageInfo | null => {
+  let pageInfo: PageInfo | null = null;
+  for (const payload of payloadsFrom(source)) pageInfo = pageInfoFrom(payload) ?? pageInfo;
+  return pageInfo ?? pageInfoFromHtml(source);
+};
+
+const listingsFrom = (source: string, now: number): readonly Listing[] => {
+  const nodes: unknown[] = [];
+  for (const payload of payloadsFrom(source)) {
+    if (!isRecord(payload.data)) continue;
+    const data = payload.data;
+    if (isRecord(data.node)) nodes.push(data.node);
+    if (!isRecord(data.marketplace_home_feed) || !Array.isArray(data.marketplace_home_feed.edges)) continue;
+    for (const edge of data.marketplace_home_feed.edges) {
+      if (isRecord(edge) && isRecord(edge.node)) nodes.push(edge.node);
     }
-    const seen = new Set<string>();
-    return nodes.flatMap((node) => {
-      const listing = listingFrom(node, now);
-      if (listing === null || seen.has(listing.id)) return [];
-      seen.add(listing.id);
-      return [listing];
-    });
-  },
-  nextCursor: (source: string): string | null => {
-    let pageInfo: PageInfo | null = null;
-    for (const payload of payloadsFrom(source)) pageInfo = pageInfoFrom(payload) ?? pageInfo;
-    pageInfo ??= pageInfoFromHtml(source);
-    return pageInfo?.hasNextPage === true && pageInfo.endCursor !== null ? pageInfo.endCursor : null;
-  },
+  }
+  const seen = new Set<string>();
+  return nodes.flatMap((node) => {
+    const listing = listingFrom(node, now);
+    if (listing === null || seen.has(listing.id)) return [];
+    seen.add(listing.id);
+    return [listing];
+  });
+};
+
+const hasHomeFeed = (source: string): boolean =>
+  payloadsFrom(source).some((payload) => isRecord(payload.data) && isRecord(payload.data.marketplace_home_feed));
+
+const inspect = (source: string, now: number): FacebookListingResponseInspection => {
+  const listings = listingsFrom(source, now);
+  const pageInfo = pageInfoFromResponse(source);
+  const nextCursor = pageInfo?.hasNextPage === true && pageInfo.endCursor !== null
+    ? pageInfo.endCursor
+    : null;
+  if (listings.length > 0) return { tag: 'page', listings, nextCursor };
+  if (pageInfo?.hasNextPage === false) return { tag: 'empty', nextCursor: null };
+  if (hasHomeFeed(source) || pageInfo !== null) return { tag: 'missing_listing_data', nextCursor };
+  return { tag: 'unrecognized' };
+};
+
+export const FacebookListingResponse = {
+  inspect: (source: string, now = Date.now()): FacebookListingResponseInspection => inspect(source, now),
 } as const;

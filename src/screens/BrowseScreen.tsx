@@ -82,7 +82,7 @@ export function BrowseScreen({
         onQueryChange={onQueryChange}
         query={query}
       />
-      {connected && error !== null && listings.length > 0 ? (
+      {error !== null && listings.length > 0 ? (
         <View style={styles.errorBanner}>
           <Ionicons name="alert-circle-outline" size={17} color={colors.danger} />
           <Text style={styles.errorBannerText}>{error}</Text>
