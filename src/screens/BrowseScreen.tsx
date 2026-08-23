@@ -216,7 +216,7 @@ export function BrowseScreen({
           />
         )}
         showsVerticalScrollIndicator={false}
-        refreshing={loading}
+        refreshing={loading && visibleListings.length > 0}
       />
       <FilterSheet
         onApply={(nextFilters) => {
