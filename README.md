@@ -1,30 +1,89 @@
-# Marketplace mobile
+# Marketplace
 
-An Expo mobile client for browsing Facebook Marketplace, saving listings, and creating search alerts.
+An Android-focused Expo app for browsing Facebook Marketplace without installing the Facebook app. It loads live listings, supports Marketplace search and filters, saves listings locally, and can surface Facebook saved-search matches as device notifications.
 
-## Run
+This is an unofficial personal project. It is not affiliated with Meta or Facebook, and it relies on undocumented Facebook web interfaces that may change without notice.
+
+## Features
+
+- Live Marketplace results with load-on-scroll pagination
+- Search with debounced network requests
+- Location autocomplete and distance, category, price, and pickup filters
+- Listing details and saved listings
+- Facebook saved-search alerts
+- Local notifications for new Marketplace matches
+- Device-local Facebook session and app state
+
+Marketplace messaging is not included.
+
+## Authentication and data flow
+
+Sign-in opens `facebook.com` in an in-app browser. Credentials are submitted directly to Facebook. After Facebook finishes signing in, the app captures the resulting session cookies and stores them with Expo SecureStore.
+
+Marketplace requests go directly from the device to Facebook. There is no project backend or proxy. Logging out deletes the SecureStore session and clears the in-app browser's cookie store.
+
+## Requirements
+
+- Node.js and npm
+- Bun, for the test suite
+- An Android SDK and either an emulator or an Android device
+- A Facebook account with Marketplace access
+
+Expo Go is not supported because the app uses native cookie, notification, background-task, and bottom-sheet dependencies.
+
+## Development
+
+Install dependencies and create a native development build:
 
 ```sh
 npm install
+npm run android
+```
+
+After the native app is installed, start Metro for later development sessions with:
+
+```sh
 npm start
 ```
 
-Scan the QR code with Expo Go, or press `a` or `i` for Android or iOS. Live Marketplace results and background alerts require a native development or release build.
+Useful checks:
 
-## Facebook account
+```sh
+npm run typecheck
+npm test
+npm run doctor
+```
 
-Open the account sheet from the header and continue with Facebook. Sign-in happens on Facebook's page, including checkpoints and two-factor authentication when required.
+## Build an APK
 
-Sign-in data is stored in the device's encrypted SecureStore. Logging out removes it from this app without logging out other Facebook apps or browsers.
+Generate a clean Android project and build a release APK with the JavaScript bundle embedded:
 
-## Included flows
+```sh
+npx expo prebuild --platform android --clean --no-install
+NODE_ENV=production ./android/gradlew -p android :app:assembleRelease
+```
 
-- Browse and search live Marketplace listings
-- Apply category, distance, price, and pickup filters
-- Open live listing details and continue on Facebook
-- Save listings for later
-- Create and remove real Facebook Marketplace saved-search alerts
-- Check Marketplace notifications when the app opens or resumes
-- Poll for new Marketplace notifications with Android WorkManager, with a minimum interval of about 15 minutes
-- Deliver deduplicated local device notifications for new Facebook results
-- Persist saved listings and alerts on the device
+The APK is written to:
+
+```text
+android/app/build/outputs/apk/release/app-release.apk
+```
+
+The generated `android/` directory is intentionally ignored. Native configuration belongs in `app.json` and Expo config plugins so a clean prebuild remains reproducible.
+
+## Project layout
+
+```text
+src/components/      Reusable native UI
+src/screens/         Browse, saved, alerts, and listing detail screens
+src/facebook/        Session handling, Facebook requests, and response parsing
+src/notifications/   Background polling and local notification delivery
+src/domain/          Marketplace domain types and filtering logic
+```
+
+## Limitations
+
+- Facebook can change its login flow, request parameters, or response shapes at any time.
+- Background checks are scheduled by Android and are not guaranteed to run exactly every 15 minutes.
+- Local notifications reflect Facebook Marketplace notifications, not an independent server-side listing monitor.
+- The current release workflow has been tested on Android, not iOS.
