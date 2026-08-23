@@ -3,9 +3,10 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AlertSheet } from '../components/AlertSheet';
+import { DistancePickerSheet } from '../components/DistancePickerSheet';
 import { FilterSheet } from '../components/FilterSheet';
 import { ListingCard } from '../components/ListingCard';
-import { LocationPickerModal } from '../components/LocationPickerModal';
+import { LocationPickerSheet } from '../components/LocationPickerSheet';
 import { MarketplaceHeader } from '../components/MarketplaceHeader';
 import type { Listing, ListingCategory, MarketplaceFilters } from '../domain/marketplace';
 import { describeFilters, filterListings, MarketplaceFilters as Filters } from '../domain/marketplace';
@@ -65,6 +66,7 @@ export function BrowseScreen({
 }: BrowseScreenProps) {
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [locationVisible, setLocationVisible] = useState(false);
+  const [distanceVisible, setDistanceVisible] = useState(false);
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertBusy, setAlertBusy] = useState(false);
   const [alertError, setAlertError] = useState<string | null>(null);
@@ -157,21 +159,33 @@ export function BrowseScreen({
               })}
             </ScrollView>
             <View style={styles.locationRow}>
-              <Pressable
-                accessibilityLabel={`Change search location, currently ${filters.location.label}`}
-                accessibilityRole="button"
-                onPress={() => setLocationVisible(true)}
-                style={({ pressed }) => [styles.locationCopy, pressed && styles.locationCopyPressed]}
-              >
+              <View style={styles.locationCopy}>
                 <Text style={styles.eyebrow}>Today’s picks</Text>
                 <View style={styles.placeRow}>
                   <Ionicons name="location-sharp" size={14} color={colors.blue} />
-                  <Text numberOfLines={1} style={styles.place}>
-                    {filters.location.label} · {filters.radius === null ? 'Any distance' : `${filters.radius} mi`}
-                  </Text>
-                  <Ionicons name="chevron-down" size={14} color={colors.blue} />
+                  <Pressable
+                    accessibilityLabel={`Change search location, currently ${filters.location.label}`}
+                    accessibilityRole="button"
+                    hitSlop={4}
+                    onPress={() => setLocationVisible(true)}
+                    style={({ pressed }) => [styles.inlineControl, styles.locationControl, pressed && styles.inlineControlPressed]}
+                  >
+                    <Text numberOfLines={1} style={styles.place}>{filters.location.label}</Text>
+                    <Ionicons name="chevron-down" size={14} color={colors.blue} />
+                  </Pressable>
+                  <Text style={styles.placeSeparator}>·</Text>
+                  <Pressable
+                    accessibilityLabel={`Change search distance, currently ${filters.radius === null ? 'any distance' : `${filters.radius} miles`}`}
+                    accessibilityRole="button"
+                    hitSlop={4}
+                    onPress={() => setDistanceVisible(true)}
+                    style={({ pressed }) => [styles.inlineControl, pressed && styles.inlineControlPressed]}
+                  >
+                    <Text style={styles.place}>{filters.radius === null ? 'Any distance' : `${filters.radius} mi`}</Text>
+                    <Ionicons name="chevron-down" size={14} color={colors.blue} />
+                  </Pressable>
                 </View>
-              </Pressable>
+              </View>
               <Pressable
                 accessibilityLabel="Create notification for these results"
                 onPress={() => setAlertVisible(true)}
@@ -229,7 +243,14 @@ export function BrowseScreen({
         value={filters}
         visible={filtersVisible}
       />
-      <LocationPickerModal
+      <DistancePickerSheet
+        locationLabel={filters.location.label}
+        onClose={() => setDistanceVisible(false)}
+        onSelect={(radius) => onFiltersChange({ ...filters, radius })}
+        selected={filters.radius}
+        visible={distanceVisible}
+      />
+      <LocationPickerSheet
         onClose={() => setLocationVisible(false)}
         onSelect={(location) => onFiltersChange({ ...filters, location })}
         selected={filters.location}
@@ -270,11 +291,14 @@ const styles = StyleSheet.create({
   quickText: { color: colors.text, fontSize: 13, fontWeight: '700' },
   quickTextActive: { color: colors.blue },
   locationRow: { paddingBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  locationCopy: { flex: 1, minHeight: 48, marginLeft: -6, paddingLeft: 6, borderRadius: 10, justifyContent: 'center' },
-  locationCopyPressed: { backgroundColor: colors.chip },
+  locationCopy: { flex: 1, minWidth: 0, minHeight: 48, justifyContent: 'center' },
   eyebrow: { color: colors.text, fontSize: 21, lineHeight: 26, fontWeight: '800', letterSpacing: -0.35 },
   placeRow: { marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 3 },
+  inlineControl: { minHeight: 24, flexDirection: 'row', alignItems: 'center' },
+  inlineControlPressed: { opacity: 0.55 },
+  locationControl: { minWidth: 0, flexShrink: 1 },
   place: { flexShrink: 1, color: colors.blue, fontSize: 13, lineHeight: 17, fontWeight: '700' },
+  placeSeparator: { color: colors.blue, fontSize: 13, lineHeight: 17, fontWeight: '700' },
   notifyButton: { height: 38, paddingHorizontal: 13, borderRadius: 19, backgroundColor: colors.blueSoft, flexDirection: 'row', alignItems: 'center', gap: 5 },
   notifyText: { color: colors.blue, fontSize: 13, fontWeight: '800' },
   resultCount: { marginBottom: 12, color: colors.muted, fontSize: 12, lineHeight: 16 },

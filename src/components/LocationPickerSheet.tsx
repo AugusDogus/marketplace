@@ -1,27 +1,48 @@
+import {
+  BottomSheetFlatList,
+  BottomSheetModal,
+  BottomSheetTextInput,
+  BottomSheetView,
+} from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { MarketplaceLocation } from '../domain/marketplace';
 import { FacebookMarketplace, type MarketplaceLocationSuggestion } from '../facebook/marketplace';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { colors } from '../theme';
+import { BottomDrawerBackdrop } from './BottomDrawerBackdrop';
 
-type LocationPickerModalProps = {
+const snapPoints = ['85%'];
+
+type LocationPickerSheetProps = {
   onClose: () => void;
   onSelect: (location: MarketplaceLocation) => void;
   selected: MarketplaceLocation;
   visible: boolean;
 };
 
-export function LocationPickerModal({ onClose, onSelect, selected, visible }: LocationPickerModalProps) {
+export function LocationPickerSheet({ onClose, onSelect, selected, visible }: LocationPickerSheetProps) {
+  const sheet = useRef<BottomSheetModal>(null);
+  const presented = useRef(false);
+  const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<readonly MarketplaceLocationSuggestion[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const requestId = useRef(0);
   const debouncedQuery = useDebouncedValue(query, 350);
+
+  useEffect(() => {
+    if (visible && !presented.current) {
+      presented.current = true;
+      sheet.current?.present();
+    } else if (!visible && presented.current) {
+      sheet.current?.dismiss();
+    }
+  }, [visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -58,18 +79,34 @@ export function LocationPickerModal({ onClose, onSelect, selected, visible }: Lo
   }, [debouncedQuery, visible]);
 
   return (
-    <Modal animationType="slide" onRequestClose={onClose} visible={visible}>
-      <SafeAreaView style={styles.safeArea}>
+    <BottomSheetModal
+      android_keyboardInputMode="adjustResize"
+      backdropComponent={BottomDrawerBackdrop}
+      backgroundStyle={styles.background}
+      enableDynamicSizing={false}
+      enablePanDownToClose
+      handleIndicatorStyle={styles.handle}
+      keyboardBehavior="extend"
+      keyboardBlurBehavior="restore"
+      onDismiss={() => {
+        presented.current = false;
+        onClose();
+      }}
+      ref={sheet}
+      snapPoints={snapPoints}
+      stackBehavior="push"
+      topInset={insets.top}
+    >
+      <BottomSheetView accessibilityViewIsModal style={styles.container}>
         <View style={styles.header}>
-          <Pressable accessibilityLabel="Close location search" onPress={onClose} style={styles.headerButton}>
-            <Ionicons color={colors.text} name="arrow-back" size={25} />
-          </Pressable>
           <Text style={styles.heading}>Search location</Text>
-          <View style={styles.headerButton} />
+          <Pressable accessibilityLabel="Close location search" onPress={onClose} style={styles.headerButton}>
+            <Ionicons color={colors.text} name="close" size={24} />
+          </Pressable>
         </View>
         <View style={styles.searchBox}>
           <Ionicons color={colors.muted} name="search" size={21} />
-          <TextInput
+          <BottomSheetTextInput
             accessibilityLabel="Find a city or neighborhood"
             autoCapitalize="words"
             autoCorrect={false}
@@ -97,8 +134,8 @@ export function LocationPickerModal({ onClose, onSelect, selected, visible }: Lo
             <Ionicons color={colors.blue} name="checkmark-circle" size={22} />
           </View>
         ) : null}
-        <FlatList
-          contentContainerStyle={styles.results}
+        <BottomSheetFlatList
+          contentContainerStyle={[styles.results, { paddingBottom: Math.max(insets.bottom, 18) }]}
           data={suggestions}
           keyboardShouldPersistTaps="handled"
           keyExtractor={(item) => `${item.location.latitude}:${item.location.longitude}`}
@@ -129,16 +166,18 @@ export function LocationPickerModal({ onClose, onSelect, selected, visible }: Lo
             </Pressable>
           )}
         />
-      </SafeAreaView>
-    </Modal>
+      </BottomSheetView>
+    </BottomSheetModal>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.surface },
-  header: { minHeight: 58, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  heading: { color: colors.text, fontSize: 18, lineHeight: 22, fontWeight: '800' },
+  background: { borderRadius: 22, backgroundColor: colors.surface },
+  handle: { backgroundColor: '#C7C9CC' },
+  container: { flex: 1 },
+  header: { minHeight: 46, paddingLeft: 18, paddingRight: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.chip, alignItems: 'center', justifyContent: 'center' },
+  heading: { color: colors.text, fontSize: 20, lineHeight: 25, fontWeight: '800' },
   searchBox: { height: 50, marginHorizontal: 18, marginTop: 8, marginBottom: 14, paddingHorizontal: 14, borderRadius: 25, backgroundColor: colors.chip, flexDirection: 'row', alignItems: 'center', gap: 9 },
   input: { flex: 1, height: 50, color: colors.text, fontSize: 16 },
   clearButton: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
@@ -146,7 +185,7 @@ const styles = StyleSheet.create({
   locationIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
   copy: { flex: 1 },
   currentLabel: { marginTop: 2, color: colors.text, fontSize: 16, lineHeight: 21, fontWeight: '800' },
-  results: { paddingHorizontal: 18, paddingBottom: 30 },
+  results: { paddingHorizontal: 18 },
   result: { minHeight: 72, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line, flexDirection: 'row', alignItems: 'center', gap: 12 },
   resultIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.chip, alignItems: 'center', justifyContent: 'center' },
   resultLabel: { color: colors.text, fontSize: 16, lineHeight: 21, fontWeight: '700' },

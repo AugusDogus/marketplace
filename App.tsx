@@ -1,8 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, BackHandler, StyleSheet, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { BottomNav, type TabName } from './src/components/BottomNav';
@@ -506,13 +508,18 @@ function MarketplaceApp() {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <MarketplaceApp />
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={styles.root}>
+      <SafeAreaProvider>
+        <BottomSheetModalProvider>
+          <MarketplaceApp />
+        </BottomSheetModalProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   safeArea: { flex: 1, backgroundColor: colors.surface },
   shell: { flex: 1, width: '100%', maxWidth: 620, alignSelf: 'center', backgroundColor: colors.surface, overflow: 'hidden' },
   screen: { flex: 1 },

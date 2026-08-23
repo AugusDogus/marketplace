@@ -1,20 +1,20 @@
+import { BottomSheetModal, BottomSheetScrollView, BottomSheetView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MarketplaceFilters, type ListingCategory } from '../domain/marketplace';
 import { colors } from '../theme';
-import { LocationPickerModal } from './LocationPickerModal';
+import { BottomDrawerBackdrop } from './BottomDrawerBackdrop';
+import { LocationPickerSheet } from './LocationPickerSheet';
 
 const categories: readonly ListingCategory[] = [
   'Vehicles',
@@ -26,6 +26,7 @@ const categories: readonly ListingCategory[] = [
 ];
 
 const radii = [null, 10, 40, 100] as const;
+const snapPoints = ['92%'];
 
 type FilterSheetProps = {
   visible: boolean;
@@ -35,17 +36,42 @@ type FilterSheetProps = {
 };
 
 export function FilterSheet({ visible, value, onApply, onClose }: FilterSheetProps) {
+  const sheet = useRef<BottomSheetModal>(null);
+  const presented = useRef(false);
+  const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState(value);
   const [locationVisible, setLocationVisible] = useState(false);
 
   useEffect(() => {
-    if (visible) setDraft(value);
+    if (visible) {
+      setDraft(value);
+      if (!presented.current) {
+        presented.current = true;
+        sheet.current?.present();
+      }
+    } else {
+      setLocationVisible(false);
+      if (presented.current) sheet.current?.dismiss();
+    }
   }, [value, visible]);
 
   return (
     <>
-      <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={visible}>
-      <SafeAreaView style={styles.safeArea}>
+      <BottomSheetModal
+        backdropComponent={BottomDrawerBackdrop}
+        backgroundStyle={styles.background}
+        enableDynamicSizing={false}
+        enablePanDownToClose
+        handleIndicatorStyle={styles.handle}
+        onDismiss={() => {
+          presented.current = false;
+          onClose();
+        }}
+        ref={sheet}
+        snapPoints={snapPoints}
+        topInset={insets.top}
+      >
+      <BottomSheetView style={styles.container}>
         <View style={styles.header}>
           <Pressable accessibilityLabel="Close filters" onPress={onClose} style={styles.headerButton}>
             <Ionicons name="close" size={25} color={colors.text} />
@@ -55,7 +81,7 @@ export function FilterSheet({ visible, value, onApply, onClose }: FilterSheetPro
             <Text style={styles.resetText}>Reset</Text>
           </Pressable>
         </View>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <BottomSheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Pressable
             accessibilityLabel={`Change search location, currently ${draft.location.label}`}
             onPress={() => setLocationVisible(true)}
@@ -143,8 +169,8 @@ export function FilterSheet({ visible, value, onApply, onClose }: FilterSheetPro
               value={draft.localPickupOnly}
             />
           </View>
-        </ScrollView>
-        <View style={styles.footer}>
+        </BottomSheetScrollView>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 14) }]}>
           <Pressable
             onPress={() => onApply(draft)}
             style={({ pressed }) => [styles.applyButton, pressed && styles.pressed]}
@@ -152,9 +178,9 @@ export function FilterSheet({ visible, value, onApply, onClose }: FilterSheetPro
             <Text style={styles.applyText}>Show results</Text>
           </Pressable>
         </View>
-      </SafeAreaView>
-      </Modal>
-      <LocationPickerModal
+      </BottomSheetView>
+      </BottomSheetModal>
+      <LocationPickerSheet
         onClose={() => setLocationVisible(false)}
         onSelect={(location) => setDraft((current) => ({ ...current, location }))}
         selected={draft.location}
@@ -165,7 +191,9 @@ export function FilterSheet({ visible, value, onApply, onClose }: FilterSheetPro
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.surface },
+  background: { borderRadius: 22, backgroundColor: colors.surface },
+  handle: { backgroundColor: '#C7C9CC' },
+  container: { flex: 1 },
   header: { minHeight: 58, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   heading: { fontSize: 18, lineHeight: 22, fontWeight: '800', color: colors.text },
