@@ -11,8 +11,11 @@ expo-env.d.ts
 
 # Native
 .kotlin/
+*.apk
+*.aab
 *.orig.*
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key
@@ -31,8 +34,11 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
+# local data and credentials
+.env
+.env.*
+!.env.example
+*.har
 
 # typescript
 *.tsbuildinfo
