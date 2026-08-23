@@ -181,7 +181,9 @@ export function BrowseScreen({
                 <Text style={styles.notifyText}>Notify me</Text>
               </Pressable>
             </View>
-            <Text style={styles.resultCount}>{visibleListings.length} listings</Text>
+            {!loading || visibleListings.length > 0 ? (
+              <Text style={styles.resultCount}>{visibleListings.length} listings</Text>
+            ) : null}
           </View>
         }
         ListFooterComponent={
