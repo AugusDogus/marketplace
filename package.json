@@ -23,6 +23,7 @@
     "react-native-webview": "13.16.1"
   },
   "devDependencies": {
+    "@types/bun": "^1.4.0",
     "@types/react": "~19.2.2",
     "typescript": "~6.0.3"
   },
@@ -30,6 +31,7 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
+    "test": "bun test",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "doctor": "npx expo-doctor"

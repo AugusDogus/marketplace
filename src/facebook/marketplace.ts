@@ -10,6 +10,7 @@ import type {
   MarketplaceNotification,
 } from '../domain/marketplace';
 import { CometRequestMetadata, type CometRequestMetadata as RequestMetadata } from './comet-context';
+import { FacebookBrowseRequest } from './listing-request';
 import { FacebookRequestProfile } from './request-profile';
 import { FacebookSession, type FacebookSession as Session } from './session';
 
@@ -623,21 +624,7 @@ const graphListings = async (
     latitude: request.location.latitude,
     longitude: request.location.longitude,
   };
-  const browseVariables = {
-    buyLocation,
-    count: 1,
-    cursor: null,
-    imageWidth: 256,
-    mediaType: 'image/jpeg',
-    radius: radiusKm * 1000,
-    scale: 1,
-    sizing: 'cover-fill-cropped',
-    useSDFPath: true,
-    __relay_internal__pv__CometMarketplaceShouldShowTopPicksStrikethroughrelayprovider: false,
-    __relay_internal__pv__GHLShouldChangeMarketplaceSponsoredDataFieldNamerelayprovider: true,
-    __relay_internal__pv__MarketplaceCometAdmodulerelayprovider: true,
-    __relay_internal__pv__CometMarketplaceShouldShowFeedShippingIconrelayprovider: false,
-  };
+  const browseVariables = FacebookBrowseRequest.initialVariables(request);
   const searchVariables = {
     buyLocation,
     contextual_data: null,
@@ -718,24 +705,7 @@ const listingPageAfter = async (
     latitude: request.location.latitude,
     longitude: request.location.longitude,
   };
-  const browseVariables = {
-    buyLocation,
-    count: 5,
-    cursor,
-    imageWidth: 256,
-    includePDPRelevantListings: false,
-    mediaType: 'image/jpeg',
-    pdpListingId: '',
-    radius: radiusKm * 1000,
-    refinement: null,
-    scale: 1,
-    sizing: 'cover-fill-cropped',
-    useSDFPath: true,
-    __relay_internal__pv__CometMarketplaceShouldShowTopPicksStrikethroughrelayprovider: false,
-    __relay_internal__pv__GHLShouldChangeMarketplaceSponsoredDataFieldNamerelayprovider: true,
-    __relay_internal__pv__MarketplaceCometAdmodulerelayprovider: true,
-    __relay_internal__pv__CometMarketplaceShouldShowFeedShippingIconrelayprovider: false,
-  };
+  const browseVariables = FacebookBrowseRequest.paginationVariables(request, cursor);
   const searchVariables = {
     count: 24,
     cursor,
