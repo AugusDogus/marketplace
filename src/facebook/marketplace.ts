@@ -11,6 +11,7 @@ import type {
 } from '../domain/marketplace';
 import { CometRequestMetadata, type CometRequestMetadata as RequestMetadata } from './comet-context';
 import { FacebookBrowseRequest, FacebookSearchRequest } from './listing-request';
+import { FacebookListingResponse } from './listing-response';
 import { FacebookRequestProfile } from './request-profile';
 import { FacebookSession, type FacebookSession as Session } from './session';
 
@@ -187,77 +188,6 @@ const parseListings = (source: string): Listing[] => {
   });
 };
 
-const parseGraphListing = (value: unknown): Listing | null => {
-  if (!isRecord(value) || !isRecord(value.listing) || !isRecord(value.data)) return null;
-  const listing = value.listing;
-  const data = value.data;
-  const priceData = isRecord(data.price) ? data.price : null;
-  const photo = isRecord(value.photo) ? value.photo : null;
-  const defaultImage = photo !== null && isRecord(photo.default_image) ? photo.default_image : null;
-  const entity = isRecord(value.entity) ? value.entity : null;
-  const location = entity !== null && isRecord(entity.location) ? entity.location : null;
-  const reverseGeocode = location !== null && isRecord(location.reverse_geocode) ? location.reverse_geocode : null;
-  if (
-    typeof listing.id !== 'string' ||
-    typeof listing.creation_time !== 'number' ||
-    typeof data.title !== 'string' ||
-    priceData === null ||
-    typeof priceData.amount_with_offset !== 'string' ||
-    defaultImage === null ||
-    typeof defaultImage.uri !== 'string' ||
-    reverseGeocode === null ||
-    typeof reverseGeocode.city !== 'string' ||
-    typeof reverseGeocode.state !== 'string'
-  ) return null;
-  const price = Number(priceData.amount_with_offset) / 100;
-  if (!Number.isFinite(price)) return null;
-  const currency = typeof priceData.currency === 'string' ? priceData.currency : 'USD';
-  return {
-    id: listing.id,
-    title: data.title,
-    price,
-    formattedPrice: new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: Number.isInteger(price) ? 0 : 2,
-    }).format(price),
-    city: reverseGeocode.city,
-    state: reverseGeocode.state,
-    category: 'Other',
-    image: { uri: defaultImage.uri },
-    pickupOptions: [],
-    listedAgo: relativeTime(listing.creation_time),
-  };
-};
-
-const parseGraphListings = (source: string): Listing[] => {
-  const nodes: unknown[] = [];
-  for (const line of source.split(/\r?\n/)) {
-    const cleaned = line.replace(/^for \(;;\);/, '').trim();
-    if (cleaned === '') continue;
-    let payload: unknown;
-    try {
-      payload = JSON.parse(cleaned);
-    } catch {
-      continue;
-    }
-    if (!isRecord(payload) || !isRecord(payload.data)) continue;
-    const data = payload.data;
-    if (isRecord(data.node)) nodes.push(data.node);
-    if (!isRecord(data.marketplace_home_feed) || !Array.isArray(data.marketplace_home_feed.edges)) continue;
-    for (const edge of data.marketplace_home_feed.edges) {
-      if (isRecord(edge) && isRecord(edge.node)) nodes.push(edge.node);
-    }
-  }
-  const seen = new Set<string>();
-  return nodes.flatMap((node) => {
-    const listing = parseGraphListing(node);
-    if (listing === null || seen.has(listing.id)) return [];
-    seen.add(listing.id);
-    return [listing];
-  });
-};
-
 const graphListingPattern = /"data":\{"product_item_id":"[^"]+"[\s\S]{0,2000}?"title":"([^"]+)"[\s\S]{0,500}?"price":\{"currency":"([^"]+)","amount_with_offset":"([^"]+)"\}[\s\S]{0,2000}?"listing":\{[\s\S]{0,300}?"id":"(\d+)"[\s\S]{0,300}?"creation_time":(\d+)[\s\S]{0,3000}?"photo":\{[\s\S]{0,500}?"default_image":\{"uri":"([^"]+)"[\s\S]{0,3000}?"entity":\{[\s\S]{0,1000}?"reverse_geocode":\{"city":"([^"]+)","state":"([^"]+)"/g;
 
 const parseRawGraphListings = (source: string): Listing[] => {
@@ -298,54 +228,6 @@ const graphPayloads = (source: string): Record<string, unknown>[] =>
       return [];
     }
   });
-
-type FacebookPageInfo = {
-  endCursor: string | null;
-  hasNextPage: boolean;
-};
-
-const pageInfoFromValue = (value: unknown, depth = 0): FacebookPageInfo | null => {
-  if (depth > 10) return null;
-  if (Array.isArray(value)) {
-    let found: FacebookPageInfo | null = null;
-    for (const item of value) found = pageInfoFromValue(item, depth + 1) ?? found;
-    return found;
-  }
-  if (!isRecord(value)) return null;
-  if (
-    typeof value.has_next_page === 'boolean' &&
-    (typeof value.end_cursor === 'string' || value.end_cursor === null)
-  ) {
-    return { endCursor: value.end_cursor, hasNextPage: value.has_next_page };
-  }
-  let found: FacebookPageInfo | null = null;
-  for (const child of Object.values(value)) found = pageInfoFromValue(child, depth + 1) ?? found;
-  return found;
-};
-
-const pageInfoFromGraphResponse = (source: string): FacebookPageInfo | null => {
-  let found: FacebookPageInfo | null = null;
-  for (const payload of graphPayloads(source)) found = pageInfoFromValue(payload) ?? found;
-  return found;
-};
-
-const pageInfoFromHtml = (source: string): FacebookPageInfo | null => {
-  const normalized = source.includes('\\"end_cursor\\"') ? source.replaceAll('\\"', '"') : source;
-  let found: FacebookPageInfo | null = null;
-  for (const match of normalized.matchAll(/"end_cursor":"((?:\\.|[^"\\])*)","has_next_page":(true|false)/g)) {
-    const cursor = match[1];
-    const hasNextPage = match[2];
-    if (cursor !== undefined && hasNextPage !== undefined) {
-      found = { endCursor: decodeJsonString(cursor), hasNextPage: hasNextPage === 'true' };
-    }
-  }
-  return found;
-};
-
-const nextCursorFrom = (source: string): string | null => {
-  const pageInfo = pageInfoFromGraphResponse(source) ?? pageInfoFromHtml(source);
-  return pageInfo?.hasNextPage === true && pageInfo.endCursor !== null ? pageInfo.endCursor : null;
-};
 
 const priceInMinorUnits = (value: string, fallback: number): number | null => {
   if (value.trim() === '') return fallback;
@@ -637,7 +519,7 @@ const graphListings = async (
   }
   const seen = new Set<string>();
   const listings = [
-    ...parseGraphListings(response.value.body),
+    ...FacebookListingResponse.listings(response.value.body),
     ...parseRawGraphListings(response.value.body),
     ...parseListings(response.value.body),
   ].filter((listing) => {
@@ -646,7 +528,7 @@ const graphListings = async (
     return true;
   });
   return listings.length > 0
-    ? { ok: true, value: { listings, nextCursor: nextCursorFrom(response.value.body) } }
+    ? { ok: true, value: { listings, nextCursor: FacebookListingResponse.nextCursor(response.value.body) } }
     : { ok: false, error: { tag: 'response_changed', message: 'Facebook accepted the distance filter, but its result format could not be parsed.' } };
 };
 
@@ -672,7 +554,7 @@ const listingPageAfter = async (
   }
   const seen = new Set<string>();
   const listings = [
-    ...parseGraphListings(response.value.body),
+    ...FacebookListingResponse.listings(response.value.body),
     ...parseRawGraphListings(response.value.body),
     ...parseListings(response.value.body),
   ].filter((listing) => {
@@ -680,7 +562,7 @@ const listingPageAfter = async (
     seen.add(listing.id);
     return true;
   });
-  const nextCursor = nextCursorFrom(response.value.body);
+  const nextCursor = FacebookListingResponse.nextCursor(response.value.body);
   return {
     ok: true,
     value: {

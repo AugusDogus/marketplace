@@ -1,0 +1,3 @@
+for (;;);{"data":{"marketplace_home_feed":{"edges":[{"cursor":"sanitized-edge-cursor","node":null}]}}}
+{"data":{"node":{"data":{"product_item_id":"sanitized-product","title":"Sanitized road bike","price":{"currency":"USD","amount_with_offset":"12500"}},"listing":{"id":"100000000000001","creation_time":1700000000},"photo":{"default_image":{"uri":"https://example.invalid/listing.jpg"}},"entity":{"location":{"reverse_geocode":{"city":"Austin","state":"TX"}}}}}}
+{"data":{"page_info":{"end_cursor":"sanitized-next-page-cursor","has_next_page":true}}}
