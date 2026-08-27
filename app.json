@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Marketplace",
-    "slug": "marketplace-mobile",
+    "slug": "marketplace",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon-marketplace.png",
