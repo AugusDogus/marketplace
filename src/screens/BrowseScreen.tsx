@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AlertSheet } from '../components/AlertSheet';
@@ -27,13 +27,14 @@ type BrowseScreenProps = {
   connected: boolean;
   error: string | null;
   hasMore: boolean;
+  initialScrollOffset: number;
   loadMoreError: string | null;
   loading: boolean;
   loadingMore: boolean;
   savedIds: ReadonlySet<string>;
   onQueryChange: (query: string) => void;
   onFiltersChange: (filters: MarketplaceFilters) => void;
-  onOpenListing: (listingId: string) => void;
+  onOpenListing: (listingId: string, scrollOffset: number) => void;
   onLoadMore: () => void;
   onOpenAlerts: () => void;
   onOpenAccount: () => void;
@@ -50,6 +51,7 @@ export function BrowseScreen({
   connected,
   error,
   hasMore,
+  initialScrollOffset,
   loadMoreError,
   loading,
   loadingMore,
@@ -70,6 +72,7 @@ export function BrowseScreen({
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertBusy, setAlertBusy] = useState(false);
   const [alertError, setAlertError] = useState<string | null>(null);
+  const scrollOffset = useRef(initialScrollOffset);
   const visibleListings = useMemo(() => filterListings(listings, '', filters), [filters, listings]);
   const filterCount = Filters.count(filters);
   const alertDescription = describeFilters(query, filters);
@@ -93,6 +96,7 @@ export function BrowseScreen({
       <FlatList
         columnWrapperStyle={styles.columns}
         contentContainerStyle={styles.listContent}
+        contentOffset={{ x: 0, y: initialScrollOffset }}
         data={visibleListings}
         keyExtractor={(item) => item.id}
         keyboardDismissMode="on-drag"
@@ -222,16 +226,20 @@ export function BrowseScreen({
         numColumns={2}
         onEndReached={hasMore ? onLoadMore : undefined}
         onEndReachedThreshold={0.55}
+        onScroll={(event) => {
+          scrollOffset.current = event.nativeEvent.contentOffset.y;
+        }}
         onRefresh={onRefresh}
         renderItem={({ item }) => (
           <ListingCard
             listing={item}
-            onOpen={() => onOpenListing(item.id)}
+            onOpen={() => onOpenListing(item.id, scrollOffset.current)}
             onToggleSaved={() => onToggleSaved(item.id)}
             saved={savedIds.has(item.id)}
           />
         )}
         showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
         refreshing={loading && visibleListings.length > 0}
       />
       <FilterSheet

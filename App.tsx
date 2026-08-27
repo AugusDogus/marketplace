@@ -127,6 +127,7 @@ function MarketplaceApp() {
   const [storageError, setStorageError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [detailOriginTab, setDetailOriginTab] = useState<TabName>('browse');
+  const browseScrollOffset = useRef(0);
   const listingRequestId = useRef(0);
   const loadingMoreRef = useRef(false);
   const debouncedQuery = useDebouncedValue(query, 400);
@@ -434,6 +435,7 @@ function MarketplaceApp() {
               error={listingError}
               filters={filters}
               hasMore={nextCursor !== null}
+              initialScrollOffset={browseScrollOffset.current}
               listings={listings}
               loadMoreError={loadMoreError}
               loading={listingLoading}
@@ -442,7 +444,10 @@ function MarketplaceApp() {
               onFiltersChange={setFilters}
               onOpenAlerts={() => setScreen({ name: 'tab', tab: 'alerts' })}
               onOpenAccount={() => setSessionVisible(true)}
-              onOpenListing={(listingId) => void openListing(listingId)}
+              onOpenListing={(listingId, scrollOffset) => {
+                browseScrollOffset.current = scrollOffset;
+                void openListing(listingId);
+              }}
               onQueryChange={setQuery}
               onLoadMore={() => void loadMoreListings()}
               onRefresh={() => void refreshListings({ query, location: filters.location, radius: filters.radius })}
