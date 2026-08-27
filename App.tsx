@@ -297,6 +297,7 @@ function MarketplaceApp() {
 
   const webLoginAuthenticated = async () => {
     await MarketplaceAlerts.reset();
+    FacebookMarketplace.resetContext();
     setWebLoginVisible(false);
     setSessionStatus('connected');
     setToast('Logged in to Facebook');
@@ -309,6 +310,7 @@ function MarketplaceApp() {
     setSessionError(null);
     const result = await FacebookWebAuth.clear();
     if (result.ok) {
+      FacebookMarketplace.resetContext();
       try {
         await MarketplaceAlerts.stop();
         await MarketplaceAlerts.reset();

@@ -53,6 +53,13 @@ type GraphContext = {
   userId: string;
 };
 
+type GraphContextKind = 'browse' | 'search';
+
+const graphContexts: Record<GraphContextKind, GraphContext | null> = {
+  browse: null,
+  search: null,
+};
+
 export type SavedSearchRequest = {
   filters: MarketplaceFilters;
   query: string;
@@ -503,19 +510,28 @@ const marketplaceUrl = (request: ListingRequest): string => {
   return request.query.trim() === '' ? base : `${base}search/?query=${encodeURIComponent(request.query.trim())}`;
 };
 
+const graphContextKind = (request: ListingRequest): GraphContextKind =>
+  request.query.trim() === '' ? 'browse' : 'search';
+
+const freshGraphContext = async (request: ListingRequest): Promise<MarketplaceResult<GraphContext>> => {
+  const page = await authenticatedRequest(marketplaceUrl(request));
+  if (!page.ok) return page;
+  const context = await graphContextFrom(page.value);
+  if (context.ok) graphContexts[graphContextKind(request)] = context.value;
+  return context;
+};
+
 const graphListings = async (
-  page: AuthenticatedResponse,
+  context: GraphContext,
   request: ListingRequest,
 ): Promise<MarketplaceResult<ListingPage>> => {
-  const context = await graphContextFrom(page);
-  if (!context.ok) return context;
   const browseVariables = FacebookBrowseRequest.initialVariables(request);
   const searchVariables = FacebookSearchRequest.initialVariables(request);
   const searching = request.query.trim() !== '';
   const friendlyName = searching
     ? 'CometMarketplaceSearchContentContainerQuery'
     : 'MarketplaceCometBrowseFeedLightContainerQuery';
-  const response = await graphRequest(context.value, {
+  const response = await graphRequest({ ...context, pageUrl: marketplaceUrl(request) }, {
     friendlyName,
     documentId: searching ? searchQueryDocumentId : browseQueryDocumentId,
     variables: searching ? searchVariables : browseVariables,
@@ -738,9 +754,22 @@ export const FacebookMarketplace = {
     return context.ok ? searchLocations(page.value, context.value, query) : context;
   },
   listings: async (request: ListingRequest): Promise<MarketplaceResult<ListingPage>> => {
-    const page = await authenticatedRequest(marketplaceUrl(request));
-    if (!page.ok) return page;
-    return graphListings(page.value, request);
+    const kind = graphContextKind(request);
+    const cachedContext = graphContexts[kind];
+    const context = cachedContext === null ? await freshGraphContext(request) : { ok: true as const, value: cachedContext };
+    if (!context.ok) return context;
+    let result = await graphListings(context.value, request);
+    if (!result.ok && cachedContext !== null) {
+      graphContexts[kind] = null;
+      const refreshedContext = await freshGraphContext(request);
+      if (!refreshedContext.ok) return refreshedContext;
+      result = await graphListings(refreshedContext.value, request);
+    }
+    return result;
+  },
+  resetContext: () => {
+    graphContexts.browse = null;
+    graphContexts.search = null;
   },
   moreListings,
   detail: async (listingId: string): Promise<MarketplaceResult<ListingDetail>> => {
