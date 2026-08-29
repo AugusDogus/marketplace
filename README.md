@@ -61,6 +61,8 @@ NODE_ENV=production ./android/gradlew -p android :app:assembleRelease
 
 The APK is written to `android/app/build/outputs/apk/release/app-release.apk`.
 
+Pushing a semantic version tag builds a signed APK and publishes a GitHub release. See [RELEASING.md](RELEASING.md) for the one-time signing setup.
+
 ## Caveats
 
 - Facebook can break this app whenever it changes its undocumented web interfaces.
