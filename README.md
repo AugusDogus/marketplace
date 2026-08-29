@@ -5,6 +5,12 @@
 
 I'm never installing the Facebook app on my phone again. Unfortunately, Marketplace is still the best place to buy used stuff locally.
 
+<p align="center">
+  <img src="assets/screenshots/filters.png" width="30%" alt="Marketplace filters">
+  <img src="assets/screenshots/sign-in.png" width="30%" alt="Facebook sign-in">
+  <img src="assets/screenshots/alerts.png" width="30%" alt="Marketplace alerts">
+</p>
+
 ## What it does
 
 - Browses and searches live Marketplace listings
