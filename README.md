@@ -3,7 +3,7 @@
 
 # Facebook Marketplace
 
-Never installing the Facebook app on my phone again. Unfortunately, Marketplace is still the best place to buy used stuff locally.
+I'm never installing the Facebook app on my phone again. Unfortunately, Marketplace is still the best place to buy used stuff locally.
 
 ## What it does
 
