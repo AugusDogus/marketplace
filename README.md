@@ -1,9 +1,7 @@
-# Marketplace
-
 > [!NOTE]
 > AI Slop
 
-## Facebook Marketplace
+# Facebook Marketplace
 
 Never installing the Facebook app on my phone again. Unfortunately, Marketplace is still the best place to buy used stuff locally.
 
