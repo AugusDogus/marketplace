@@ -8,6 +8,7 @@ type MarketplaceHeaderProps = {
   alertCount: number;
   connected: boolean;
   onQueryChange: (query: string) => void;
+  onQuerySubmit: (query: string) => void;
   onOpenAlerts: () => void;
   onOpenAccount: () => void;
 };
@@ -17,6 +18,7 @@ export function MarketplaceHeader({
   alertCount,
   connected,
   onQueryChange,
+  onQuerySubmit,
   onOpenAlerts,
   onOpenAccount,
 }: MarketplaceHeaderProps) {
@@ -52,6 +54,7 @@ export function MarketplaceHeader({
         <TextInput
           accessibilityLabel="Search Marketplace"
           onChangeText={onQueryChange}
+          onSubmitEditing={(event) => onQuerySubmit(event.nativeEvent.text)}
           placeholder="Search Marketplace"
           placeholderTextColor={colors.muted}
           returnKeyType="search"
@@ -59,7 +62,13 @@ export function MarketplaceHeader({
           value={query}
         />
         {query !== '' ? (
-          <Pressable accessibilityLabel="Clear search" onPress={() => onQueryChange('')}>
+          <Pressable
+            accessibilityLabel="Clear search"
+            onPress={() => {
+              onQueryChange('');
+              onQuerySubmit('');
+            }}
+          >
             <Ionicons name="close-circle" size={18} color="#8A8D91" />
           </Pressable>
         ) : null}

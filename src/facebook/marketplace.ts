@@ -10,13 +10,14 @@ import type {
   MarketplaceNotification,
 } from '../domain/marketplace';
 import { CometRequestMetadata, type CometRequestMetadata as RequestMetadata } from './comet-context';
+import { FacebookUrl } from './facebook-url';
 import { FacebookBrowseRequest, FacebookSearchRequest } from './listing-request';
 import { FacebookListingResponse } from './listing-response';
 import { FacebookRequestProfile } from './request-profile';
 import { FacebookSession, type FacebookSession as Session } from './session';
 
 export type MarketplaceError = {
-  tag: 'not_authenticated' | 'unsupported_platform' | 'request_failed' | 'session_expired' | 'response_changed' | 'listing_unavailable';
+  tag: 'account_checkpoint' | 'not_authenticated' | 'unsupported_platform' | 'request_failed' | 'session_expired' | 'response_changed' | 'listing_unavailable';
   message: string;
 };
 
@@ -59,6 +60,16 @@ const graphContexts: Record<GraphContextKind, GraphContext | null> = {
   browse: null,
   search: null,
 };
+
+let accountAccessBlocked = false;
+
+const checkpointError = (): MarketplaceResult<never> => ({
+  ok: false,
+  error: {
+    tag: 'account_checkpoint',
+    message: 'Facebook paused this account after detecting automated behavior. This app has stopped making requests. Complete the checkpoint in your regular browser before signing in again.',
+  },
+});
 
 export type SavedSearchRequest = {
   filters: MarketplaceFilters;
@@ -475,6 +486,7 @@ const authenticatedRequest = async (
   url: string,
   options: { method?: 'GET' | 'POST'; body?: string; headers?: Record<string, string> } = {},
 ): Promise<MarketplaceResult<AuthenticatedResponse>> => {
+  if (accountAccessBlocked) return checkpointError();
   const loaded = await loadNormalizedSession();
   if (!loaded.ok) return loaded;
   let response: Awaited<ReturnType<typeof fetch>>;
@@ -489,6 +501,13 @@ const authenticatedRequest = async (
     return { ok: false, error: { tag: 'request_failed', message: 'Facebook could not be reached. Check the device connection and try again.' } };
   }
   const body = await response.text();
+  if (FacebookUrl.isCheckpoint(response.url, body)) {
+    accountAccessBlocked = true;
+    graphContexts.browse = null;
+    graphContexts.search = null;
+    await FacebookSession.clear();
+    return checkpointError();
+  }
   await FacebookSession.save(FacebookSession.withSetCookies(loaded.value, getSetCookies(response.headers)));
   if (response.url.includes('/login') || body.includes('id="login_form"')) {
     return { ok: false, error: { tag: 'session_expired', message: 'Your Facebook sign-in has expired. Sign in again.' } };
@@ -768,6 +787,7 @@ export const FacebookMarketplace = {
     return result;
   },
   resetContext: () => {
+    accountAccessBlocked = false;
     graphContexts.browse = null;
     graphContexts.search = null;
   },

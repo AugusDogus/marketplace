@@ -31,14 +31,7 @@
           "androidWebkitVersion": "1.16.0"
         }
       ],
-      "expo-background-task",
-      [
-        "expo-notifications",
-        {
-          "color": "#1877F2",
-          "defaultChannel": "marketplace-alerts"
-        }
-      ]
+      "expo-background-task"
     ]
   }
 }

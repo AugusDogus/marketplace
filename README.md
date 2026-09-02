@@ -16,7 +16,7 @@ I'm never installing the Facebook app on my phone again. Unfortunately, Marketpl
 - Browses and searches live Marketplace listings
 - Filters by location, distance, category, price, and pickup options
 - Saves listings locally
-- Creates saved-search alerts and posts local notifications
+- Creates saved-search alerts on Facebook
 - Keeps Facebook traffic and session data on the device
 
 Marketplace messaging is not included.
@@ -66,6 +66,5 @@ Pushing a semantic version tag builds a signed APK and publishes a GitHub releas
 ## Caveats
 
 - Facebook can break this app whenever it changes its undocumented web interfaces.
-- Background alerts run on Android's schedule and are not instant.
-- Notifications come from this app, not from Facebook.
+- The app does not poll Facebook in the background.
 - Android is the only tested platform.

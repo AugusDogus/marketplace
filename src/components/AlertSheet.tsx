@@ -20,11 +20,11 @@ export function AlertSheet({ busy, description, error, visible, onClose, onCreat
           <View style={styles.iconWrap}>
             <Ionicons name="notifications" size={28} color={colors.blue} />
           </View>
-          <Text style={styles.title}>Get notified about new listings?</Text>
+          <Text style={styles.title}>Save this Marketplace alert?</Text>
           <Text style={styles.description}>{description}</Text>
           <View style={styles.noticeRow}>
             <Ionicons name="flash" size={18} color={colors.success} />
-            <Text style={styles.noticeText}>Facebook will save this alert. We’ll check for new matches about every 15 minutes.</Text>
+            <Text style={styles.noticeText}>Facebook will save this alert. This app will not check your account in the background.</Text>
           </View>
           {error === null ? null : <Text style={styles.error}>{error}</Text>}
           <Pressable disabled={busy} onPress={onCreate} style={({ pressed }) => [styles.primary, (pressed || busy) && styles.pressed]}>

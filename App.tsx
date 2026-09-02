@@ -3,7 +3,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, BackHandler, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,10 +11,9 @@ import { BottomNav, type TabName } from './src/components/BottomNav';
 import { FacebookLoginModal } from './src/components/FacebookLoginModal';
 import { SessionSheet } from './src/components/SessionSheet';
 import { MarketplaceFilters, MarketplaceLocation, type Listing, type ListingDetailState, type SavedSearch } from './src/domain/marketplace';
-import { FacebookMarketplace } from './src/facebook/marketplace';
+import { FacebookMarketplace, type MarketplaceError } from './src/facebook/marketplace';
 import { FacebookSession } from './src/facebook/session';
 import { FacebookWebAuth } from './src/facebook/web-auth';
-import { useDebouncedValue } from './src/hooks/useDebouncedValue';
 import { MarketplaceAlerts } from './src/notifications/marketplace-alerts';
 import { AlertsScreen } from './src/screens/AlertsScreen';
 import { BrowseScreen } from './src/screens/BrowseScreen';
@@ -23,6 +22,9 @@ import { SavedScreen } from './src/screens/SavedScreen';
 import { colors, shadow } from './src/theme';
 
 const storageKey = 'marketplace-prototype-state-v1';
+
+const endsFacebookSession = (tag: MarketplaceError['tag']): boolean =>
+  tag === 'account_checkpoint' || tag === 'not_authenticated' || tag === 'session_expired';
 
 type Screen =
   | { name: 'tab'; tab: TabName }
@@ -108,6 +110,7 @@ const parsePersistedState = (raw: string): PersistedState | null => {
 function MarketplaceApp() {
   const [screen, setScreen] = useState<Screen>({ name: 'tab', tab: 'browse' });
   const [query, setQuery] = useState('');
+  const [submittedQuery, setSubmittedQuery] = useState('');
   const [filters, setFilters] = useState(MarketplaceFilters.default);
   const [savedIds, setSavedIds] = useState<ReadonlySet<string>>(() => new Set());
   const [alerts, setAlerts] = useState<readonly SavedSearch[]>([]);
@@ -130,7 +133,6 @@ function MarketplaceApp() {
   const browseScrollOffset = useRef(0);
   const listingRequestId = useRef(0);
   const loadingMoreRef = useRef(false);
-  const debouncedQuery = useDebouncedValue(query, 400);
 
   const refreshListings = useCallback(async (request: { query: string; location: MarketplaceFilters['location']; radius: MarketplaceFilters['radius'] }) => {
     const requestId = listingRequestId.current + 1;
@@ -149,7 +151,7 @@ function MarketplaceApp() {
       setSessionStatus('connected');
     } else {
       setListingError(result.error.message);
-      if (result.error.tag === 'not_authenticated' || result.error.tag === 'session_expired') {
+      if (endsFacebookSession(result.error.tag)) {
         setSessionStatus('disconnected');
       }
       if (result.error.tag === 'unsupported_platform') setSessionStatus('unavailable');
@@ -164,7 +166,7 @@ function MarketplaceApp() {
     setLoadingMore(true);
     setLoadMoreError(null);
     const result = await FacebookMarketplace.moreListings({
-      query: debouncedQuery,
+      query: submittedQuery,
       location: filters.location,
       radius: filters.radius,
     }, nextCursor);
@@ -178,7 +180,7 @@ function MarketplaceApp() {
       setNextCursor(result.value.nextCursor);
     } else {
       setLoadMoreError(result.error.message);
-      if (result.error.tag === 'not_authenticated' || result.error.tag === 'session_expired') {
+      if (endsFacebookSession(result.error.tag)) {
         setSessionStatus('disconnected');
       }
     }
@@ -186,7 +188,7 @@ function MarketplaceApp() {
       loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [debouncedQuery, filters.location, filters.radius, nextCursor, sessionStatus]);
+  }, [filters.location, filters.radius, nextCursor, sessionStatus, submittedQuery]);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -208,20 +210,19 @@ function MarketplaceApp() {
   useEffect(() => {
     if (sessionStatus !== 'connected') return;
     void refreshListings({
-      query: debouncedQuery,
+      query: submittedQuery,
       location: filters.location,
       radius: filters.radius,
     });
-  }, [debouncedQuery, filters.location.label, filters.location.latitude, filters.location.longitude, filters.radius, refreshListings, sessionStatus]);
+  }, [filters.location.label, filters.location.latitude, filters.location.longitude, filters.radius, refreshListings, sessionStatus, submittedQuery]);
 
   useEffect(() => {
-    if (sessionStatus !== 'connected') return;
-    void MarketplaceAlerts.start();
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void MarketplaceAlerts.sync();
-    });
-    return () => subscription.remove();
-  }, [sessionStatus]);
+    const disableAutomaticChecks = async () => {
+      const result = await MarketplaceAlerts.stop();
+      if (!result.ok) setStorageError(result.message);
+    };
+    void disableAutomaticChecks();
+  }, []);
 
   useEffect(() => {
     const hydrate = async () => {
@@ -301,8 +302,6 @@ function MarketplaceApp() {
     setWebLoginVisible(false);
     setSessionStatus('connected');
     setToast('Logged in to Facebook');
-    await refreshListings({ query, location: filters.location, radius: filters.radius });
-    await MarketplaceAlerts.start();
   };
 
   const logout = async () => {
@@ -312,10 +311,11 @@ function MarketplaceApp() {
     if (result.ok) {
       FacebookMarketplace.resetContext();
       try {
-        await MarketplaceAlerts.stop();
+        const stopped = await MarketplaceAlerts.stop();
+        if (!stopped.ok) setStorageError(stopped.message);
         await MarketplaceAlerts.reset();
       } catch {
-        setStorageError('You are logged out, but an old alert check could not be removed. It can no longer access your account.');
+        setStorageError('You are logged out, but old alert state could not be removed. It can no longer access your account.');
       }
       setSessionStatus('disconnected');
       setListings([]);
@@ -338,6 +338,7 @@ function MarketplaceApp() {
     setScreen({ name: 'detail', listingId });
     setDetailStates((current) => new Map(current).set(listingId, { status: 'loading' }));
     const result = await FacebookMarketplace.detail(listingId);
+    if (!result.ok && endsFacebookSession(result.error.tag)) setSessionStatus('disconnected');
     setDetailStates((current) => new Map(current).set(
       listingId,
       result.ok
@@ -361,32 +362,24 @@ function MarketplaceApp() {
   };
 
   const createAlert = async (): Promise<{ ok: true } | { ok: false; message: string }> => {
-    const monitor = await MarketplaceAlerts.start();
-    const permission = await MarketplaceAlerts.requestPermission();
-    const result = await FacebookMarketplace.createSavedSearch({ query, filters });
+    const result = await FacebookMarketplace.createSavedSearch({ query: submittedQuery, filters });
     if (!result.ok) {
-      if (result.error.tag === 'not_authenticated' || result.error.tag === 'session_expired') {
+      if (endsFacebookSession(result.error.tag)) {
         setSessionStatus('disconnected');
       }
       return { ok: false, message: result.error.message };
     }
-    const label = query.trim() || filters.category || 'All Marketplace';
+    const label = submittedQuery || filters.category || 'All Marketplace';
     const nextAlert: SavedSearch = {
       id: result.value.id,
       label,
-      query,
+      query: submittedQuery,
       createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       filters,
       provider: 'facebook',
     };
     setAlerts((current) => [nextAlert, ...current]);
-    setToast(
-      !permission.ok
-        ? permission.error.message
-        : !monitor.ok
-          ? monitor.error.message
-          : 'Facebook Marketplace alert created',
-    );
+    setToast('Facebook Marketplace alert created');
     return { ok: true };
   };
 
@@ -396,6 +389,7 @@ function MarketplaceApp() {
     if (alert.provider === 'facebook') {
       const result = await FacebookMarketplace.deleteSavedSearch(alert.id);
       if (!result.ok) {
+        if (endsFacebookSession(result.error.tag)) setSessionStatus('disconnected');
         setToast(result.error.message);
         return;
       }
@@ -406,8 +400,18 @@ function MarketplaceApp() {
 
   const openAlert = (alert: SavedSearch) => {
     setQuery(alert.query);
+    setSubmittedQuery(alert.query);
     setFilters(alert.filters);
     setScreen({ name: 'tab', tab: 'browse' });
+  };
+
+  const submitQuery = (nextQuery: string) => {
+    const normalized = nextQuery.trim();
+    if (normalized === submittedQuery) {
+      void refreshListings({ query: normalized, location: filters.location, radius: filters.radius });
+      return;
+    }
+    setSubmittedQuery(normalized);
   };
 
   return (
@@ -451,8 +455,9 @@ function MarketplaceApp() {
                 void openListing(listingId);
               }}
               onQueryChange={setQuery}
+              onQuerySubmit={submitQuery}
               onLoadMore={() => void loadMoreListings()}
-              onRefresh={() => void refreshListings({ query, location: filters.location, radius: filters.radius })}
+              onRefresh={() => void refreshListings({ query: submittedQuery, location: filters.location, radius: filters.radius })}
               onToggleSaved={toggleSaved}
               query={query}
               savedIds={savedIds}

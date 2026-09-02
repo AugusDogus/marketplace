@@ -4,6 +4,7 @@ import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
+import { FacebookUrl } from '../facebook/facebook-url';
 import { FacebookWebAuth } from '../facebook/web-auth';
 import { colors } from '../theme';
 
@@ -19,8 +20,8 @@ export function FacebookLoginModal({ visible, onAuthenticated, onClose }: Facebo
   const completing = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
-  const inspectCookies = async () => {
-    if (completing.current) return;
+  const inspectCookies = async (url: string) => {
+    if (completing.current || !FacebookUrl.isMarketplace(url)) return;
     completing.current = true;
     const result = await FacebookWebAuth.captureSession();
     if (result.ok) {
@@ -61,8 +62,7 @@ export function FacebookLoginModal({ visible, onAuthenticated, onClose }: Facebo
           domStorageEnabled
           javaScriptEnabled
           onHttpError={() => setError('Facebook couldn’t open this page. Check your connection and try again.')}
-          onLoadEnd={() => void inspectCookies()}
-          onNavigationStateChange={() => void inspectCookies()}
+          onLoadEnd={(event) => void inspectCookies(event.nativeEvent.url)}
           renderLoading={() => (
             <View style={styles.loading}>
               <ActivityIndicator color={colors.blue} size="large" />

@@ -16,7 +16,7 @@ export function AlertsScreen({ alerts, onBrowse, onDelete, onOpen }: AlertsScree
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Marketplace alerts</Text>
-        <Text style={styles.subtitle}>We’ll keep watch for new matches.</Text>
+        <Text style={styles.subtitle}>Saved searches managed by Facebook.</Text>
       </View>
       {alerts.length === 0 ? (
         <View style={styles.empty}>
@@ -29,7 +29,7 @@ export function AlertsScreen({ alerts, onBrowse, onDelete, onOpen }: AlertsScree
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.infoCard}>
             <Ionicons name="sparkles" size={20} color={colors.blue} />
-            <Text style={styles.infoText}>We’ll check for new matches when you open the app and periodically in the background.</Text>
+            <Text style={styles.infoText}>This app does not check Facebook in the background. Open an alert to view its current results.</Text>
           </View>
           {alerts.map((alert) => (
             <Pressable key={alert.id} onPress={() => onOpen(alert)} style={({ pressed }) => [styles.alertCard, pressed && styles.pressed]}>

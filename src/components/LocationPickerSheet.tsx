@@ -11,7 +11,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { MarketplaceLocation } from '../domain/marketplace';
 import { FacebookMarketplace, type MarketplaceLocationSuggestion } from '../facebook/marketplace';
-import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { colors } from '../theme';
 import { BottomDrawerBackdrop } from './BottomDrawerBackdrop';
 
@@ -29,11 +28,11 @@ export function LocationPickerSheet({ onClose, onSelect, selected, visible }: Lo
   const presented = useRef(false);
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
+  const [submittedQuery, setSubmittedQuery] = useState('');
   const [suggestions, setSuggestions] = useState<readonly MarketplaceLocationSuggestion[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const requestId = useRef(0);
-  const debouncedQuery = useDebouncedValue(query, 350);
 
   useEffect(() => {
     if (visible && !presented.current) {
@@ -47,13 +46,14 @@ export function LocationPickerSheet({ onClose, onSelect, selected, visible }: Lo
   useEffect(() => {
     if (!visible) return;
     setQuery('');
+    setSubmittedQuery('');
     setSuggestions([]);
     setStatus('idle');
     setError(null);
   }, [visible]);
 
   useEffect(() => {
-    if (!visible || debouncedQuery.trim().length < 2) {
+    if (!visible || submittedQuery.length < 2) {
       setSuggestions([]);
       setStatus('idle');
       setError(null);
@@ -64,7 +64,7 @@ export function LocationPickerSheet({ onClose, onSelect, selected, visible }: Lo
     setStatus('loading');
     setError(null);
     const load = async () => {
-      const result = await FacebookMarketplace.locations(debouncedQuery);
+      const result = await FacebookMarketplace.locations(submittedQuery);
       if (requestId.current !== currentRequest) return;
       if (result.ok) {
         setSuggestions(result.value);
@@ -76,7 +76,7 @@ export function LocationPickerSheet({ onClose, onSelect, selected, visible }: Lo
       }
     };
     void load();
-  }, [debouncedQuery, visible]);
+  }, [submittedQuery, visible]);
 
   return (
     <BottomSheetModal
@@ -112,6 +112,7 @@ export function LocationPickerSheet({ onClose, onSelect, selected, visible }: Lo
             autoCorrect={false}
             autoFocus
             onChangeText={setQuery}
+            onSubmitEditing={(event) => setSubmittedQuery(event.nativeEvent.text.trim())}
             placeholder="City or neighborhood"
             placeholderTextColor={colors.muted}
             returnKeyType="search"
@@ -119,7 +120,14 @@ export function LocationPickerSheet({ onClose, onSelect, selected, visible }: Lo
             value={query}
           />
           {query !== '' ? (
-            <Pressable accessibilityLabel="Clear location search" onPress={() => setQuery('')} style={styles.clearButton}>
+            <Pressable
+              accessibilityLabel="Clear location search"
+              onPress={() => {
+                setQuery('');
+                setSubmittedQuery('');
+              }}
+              style={styles.clearButton}
+            >
               <Ionicons color={colors.muted} name="close-circle" size={20} />
             </Pressable>
           ) : null}
@@ -146,6 +154,8 @@ export function LocationPickerSheet({ onClose, onSelect, selected, visible }: Lo
               <View style={styles.message}><Text style={styles.messageTitle}>No matching locations</Text><Text style={styles.messageText}>Try a nearby city or a broader name.</Text></View>
             ) : status === 'error' ? (
               <View style={styles.message}><Text style={styles.messageTitle}>Couldn’t search locations</Text><Text style={styles.messageText}>{error}</Text></View>
+            ) : query.trim().length >= 2 ? (
+              <View style={styles.message}><Text style={styles.messageText}>Press search to find this location.</Text></View>
             ) : null
           }
           renderItem={({ item }) => (

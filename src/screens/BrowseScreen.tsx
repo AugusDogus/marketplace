@@ -33,6 +33,7 @@ type BrowseScreenProps = {
   loadingMore: boolean;
   savedIds: ReadonlySet<string>;
   onQueryChange: (query: string) => void;
+  onQuerySubmit: (query: string) => void;
   onFiltersChange: (filters: MarketplaceFilters) => void;
   onOpenListing: (listingId: string, scrollOffset: number) => void;
   onLoadMore: () => void;
@@ -57,6 +58,7 @@ export function BrowseScreen({
   loadingMore,
   savedIds,
   onQueryChange,
+  onQuerySubmit,
   onFiltersChange,
   onOpenListing,
   onLoadMore,
@@ -85,6 +87,7 @@ export function BrowseScreen({
         onOpenAccount={onOpenAccount}
         onOpenAlerts={onOpenAlerts}
         onQueryChange={onQueryChange}
+        onQuerySubmit={onQuerySubmit}
         query={query}
       />
       {error !== null && listings.length > 0 ? (
@@ -191,12 +194,12 @@ export function BrowseScreen({
                 </View>
               </View>
               <Pressable
-                accessibilityLabel="Create notification for these results"
+                accessibilityLabel="Save an alert for these results"
                 onPress={() => setAlertVisible(true)}
                 style={({ pressed }) => [styles.notifyButton, pressed && styles.pressed]}
               >
                 <Ionicons name="notifications-outline" size={17} color={colors.blue} />
-                <Text style={styles.notifyText}>Notify me</Text>
+                <Text style={styles.notifyText}>Save alert</Text>
               </Pressable>
             </View>
             {!loading || visibleListings.length > 0 ? (
@@ -221,11 +224,19 @@ export function BrowseScreen({
                 <Text style={styles.retryText}>Try again</Text>
               </Pressable>
             </View>
+          ) : hasMore ? (
+            <View style={styles.loadMoreStatus}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={onLoadMore}
+                style={({ pressed }) => [styles.loadMoreButton, pressed && styles.pressed]}
+              >
+                <Text style={styles.loadMoreButtonText}>Load more</Text>
+              </Pressable>
+            </View>
           ) : null
         }
         numColumns={2}
-        onEndReached={hasMore ? onLoadMore : undefined}
-        onEndReachedThreshold={0.55}
         onScroll={(event) => {
           scrollOffset.current = event.nativeEvent.contentOffset.y;
         }}
@@ -313,6 +324,8 @@ const styles = StyleSheet.create({
   loadMoreStatus: { minHeight: 72, paddingVertical: 18, alignItems: 'center', justifyContent: 'center', gap: 8 },
   loadMoreText: { color: colors.muted, fontSize: 12, lineHeight: 16 },
   loadMoreError: { maxWidth: 300, color: colors.danger, fontSize: 12, lineHeight: 16, textAlign: 'center' },
+  loadMoreButton: { minHeight: 40, paddingHorizontal: 18, borderRadius: 20, backgroundColor: colors.blueSoft, alignItems: 'center', justifyContent: 'center' },
+  loadMoreButtonText: { color: colors.blue, fontSize: 13, fontWeight: '800' },
   retryButton: { minHeight: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: colors.blueSoft, alignItems: 'center', justifyContent: 'center' },
   retryText: { color: colors.blue, fontSize: 13, fontWeight: '800' },
   pressed: { opacity: 0.7 },
